@@ -1,0 +1,144 @@
+import React, { createContext, useContext, useState } from 'react';
+import { Card, CardBattle, CardOwnership, GrailListEntry, MarketPriceSnapshot, User } from '../types';
+import { currentUser, mockCardBattles, mockCardDrops, mockCardOwnerships, mockCards, mockGrailEntries, mockMarketPriceSnapshots, mockMarketplaceListings } from '../data/mockData';
+
+interface AppContextType {
+  user: User;
+  cards: Card[];
+  cardOwnerships: CardOwnership[];
+  marketPriceSnapshots: MarketPriceSnapshot[];
+  cardBattles: CardBattle[];
+  grailEntries: GrailListEntry[];
+  marketplaceListings: any[];
+  cardDrops: any[];
+  addCardToCollection: (card: Card, quantity: number, condition: string) => void;
+  updateCardOwnership: (cardId: string, updates: Partial<CardOwnership>) => void;
+  removeCardFromCollection: (cardId: string) => void;
+  addCardToGrailList: (cardId: string) => void;
+  removeCardFromGrailList: (cardId: string) => void;
+  voteForCard: (battleId: string, cardIndex: 1 | 2) => void;
+}
+
+const AppContext = createContext<AppContextType | undefined>(undefined);
+
+export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [user, setUser] = useState<User>(currentUser);
+  const [cards, setCards] = useState<Card[]>(mockCards);
+  const [cardOwnerships, setCardOwnerships] = useState<CardOwnership[]>(mockCardOwnerships);
+  const [marketPriceSnapshots, setMarketPriceSnapshots] = useState<MarketPriceSnapshot[]>(mockMarketPriceSnapshots);
+  const [cardBattles, setCardBattles] = useState<CardBattle[]>(mockCardBattles);
+  const [grailEntries, setGrailEntries] = useState<GrailListEntry[]>(mockGrailEntries);
+  const [marketplaceListings, setMarketplaceListings] = useState<any[]>(mockMarketplaceListings);
+  const [cardDrops, setCardDrops] = useState<any[]>(mockCardDrops);
+
+  const addCardToCollection = (card: Card, quantity: number, condition: string) => {
+    const existingOwnership = cardOwnerships.find(
+        (ownership) => ownership.cardId === card.id && ownership.condition === condition
+    );
+
+    if (existingOwnership) {
+      setCardOwnerships(
+          cardOwnerships.map((ownership) =>
+              ownership.id === existingOwnership.id
+                  ? { ...ownership, quantity: ownership.quantity + quantity }
+                  : ownership
+          )
+      );
+    } else {
+      const newOwnership: CardOwnership = {
+        id: `ownership${cardOwnerships.length + 1}`,
+        userId: user.id,
+        cardId: card.id,
+        quantity,
+        condition,
+        purchaseDate: new Date(),
+      };
+      setCardOwnerships([...cardOwnerships, newOwnership]);
+    }
+  };
+
+  const updateCardOwnership = (cardId: string, updates: Partial<CardOwnership>) => {
+    setCardOwnerships(
+        cardOwnerships.map((ownership) =>
+            ownership.cardId === cardId
+                ? { ...ownership, ...updates }
+                : ownership
+        )
+    );
+  };
+
+  const removeCardFromCollection = (cardId: string) => {
+    setCardOwnerships(cardOwnerships.filter(ownership => ownership.cardId !== cardId));
+  };
+
+  const addCardToGrailList = (cardId: string) => {
+    const existingEntry = grailEntries.find(
+        (entry) => entry.cardId === cardId && entry.userId === user.id
+    );
+
+    if (!existingEntry) {
+      const newEntry: GrailListEntry = {
+        id: `grail${grailEntries.length + 1}`,
+        userId: user.id,
+        cardId,
+        createdAt: new Date(),
+        notifyOnAvailable: true,
+      };
+      setGrailEntries([...grailEntries, newEntry]);
+    }
+  };
+
+  const removeCardFromGrailList = (cardId: string) => {
+    setGrailEntries(
+        grailEntries.filter(
+            (entry) => !(entry.cardId === cardId && entry.userId === user.id)
+        )
+    );
+  };
+
+  const voteForCard = (battleId: string, cardIndex: 1 | 2) => {
+    setCardBattles(
+        cardBattles.map((battle) => {
+          if (battle.id === battleId) {
+            if (cardIndex === 1) {
+              return { ...battle, votesCardOne: battle.votesCardOne + 1 };
+            } else {
+              return { ...battle, votesCardTwo: battle.votesCardTwo + 1 };
+            }
+          }
+          return battle;
+        })
+    );
+  };
+
+  return (
+      <AppContext.Provider
+          value={{
+            user,
+            cards,
+            cardOwnerships,
+            marketPriceSnapshots,
+            cardBattles,
+            grailEntries,
+            marketplaceListings,
+            cardDrops,
+            addCardToCollection,
+            updateCardOwnership,
+            removeCardFromCollection,
+            addCardToGrailList,
+            removeCardFromGrailList,
+            voteForCard,
+          }}
+      >
+        {children}
+      </AppContext.Provider>
+  );
+};
+
+export const useApp = (): AppContextType => {
+  const context = useContext(AppContext);
+  if (context === undefined) {
+    throw new Error('useApp must be used within an AppProvider');
+  }
+  return context;
+};
