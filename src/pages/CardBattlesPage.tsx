@@ -101,7 +101,7 @@ const CardBattlesPage: React.FC = () => {
         <div className="mb-8">
           <div className="flex items-center mb-4">
             <Trophy className="h-6 w-6 text-[#FFC800] mr-2" />
-            <h2 className="text-2xl font-bold">Today's Battle</h2>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Today's Battle</h2>
           </div>
           <CardBattleDisplay 
             battle={activeBattle}
@@ -116,7 +116,7 @@ const CardBattlesPage: React.FC = () => {
       <div>
         <div className="flex items-center mb-4">
           <Calendar className="h-6 w-6 text-gray-500 mr-2" />
-          <h2 className="text-2xl font-bold">Past Battles</h2>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Past Battles</h2>
         </div>
         
         <div className="space-y-6">

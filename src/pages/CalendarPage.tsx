@@ -198,7 +198,7 @@ const CalendarPage: React.FC = () => {
       <div>
         <div className="flex items-center mb-4">
           <Calendar className="h-6 w-6 text-[#E10600] mr-2" />
-          <h2 className="text-2xl font-bold">Upcoming Releases</h2>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Upcoming Releases</h2>
         </div>
         
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
