@@ -255,6 +255,7 @@ const MarketplacePage: React.FC = () => {
                       .filter(snapshot => snapshot.cardId === selectedCard)
                       .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())[0]?.averagePrice
                   }
+                  enable3d
                 />
               </div>
             </div>

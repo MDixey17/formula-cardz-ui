@@ -194,6 +194,7 @@ const OneOfOneTrackerPage: React.FC = () => {
             <div key={card.id} className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
               <CardDisplayItem card={card} showActions={false} />
               <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700">
+              <div className="text-sm font-medium text-gray-900 dark:text-white">#{card.cardNumber} {card.driverName}</div>
                 <div className="text-sm text-gray-500 dark:text-gray-400">
                   {card.setName} ({card.year})
                 </div>
@@ -244,7 +245,7 @@ const OneOfOneTrackerPage: React.FC = () => {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900 dark:text-white">{card.driverName}</div>
+                    <div className="text-sm font-medium text-gray-900 dark:text-white">#{card.cardNumber} {card.driverName}</div>
                     <div className="text-sm text-gray-500 dark:text-gray-400">{card.constructorName}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">

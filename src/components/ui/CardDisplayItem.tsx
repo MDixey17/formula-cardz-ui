@@ -2,12 +2,14 @@ import React, { useState } from 'react';
 import { Card } from '../../types';
 import { Heart, DollarSign, PlusCircle, Info } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { ParallelStyles } from '../../constants/globalStyles';
 
 interface CardDisplayItemProps {
   card: Card;
   showActions?: boolean;
   marketPrice?: number;
   isInGrailList?: boolean;
+  enable3d?: boolean
 }
 
 const CardDisplayItem: React.FC<CardDisplayItemProps> = ({
@@ -15,6 +17,7 @@ const CardDisplayItem: React.FC<CardDisplayItemProps> = ({
   showActions = true,
   marketPrice,
   isInGrailList = false,
+  enable3d = false
 }) => {
   const { addCardToCollection, addCardToGrailList, removeCardFromGrailList } = useApp();
   const [isFlipped, setIsFlipped] = useState(false);
@@ -41,10 +44,10 @@ const CardDisplayItem: React.FC<CardDisplayItemProps> = ({
         className={`card-container w-full h-full perspective-1000 cursor-pointer transition-transform duration-300 transform ${
           isFlipped ? 'card-flipped' : ''
         } hover:scale-105`}
-        onClick={() => setIsFlipped(!isFlipped)}
+        onClick={() => setIsFlipped(enable3d ? !isFlipped : false)}
       >
         <div
-          className={`relative w-full rounded-lg overflow-hidden transform-style-3d transition-transform duration-500 ${
+          className={`relative aspect-[10/14] w-full rounded-lg overflow-hidden transform-style-3d transition-transform duration-500 ${
             isFlipped ? 'rotate-y-180' : ''
           }`}
           style={{
@@ -75,14 +78,8 @@ const CardDisplayItem: React.FC<CardDisplayItemProps> = ({
               )}
               {card.parallel !== 'Base' && (
                 <div
-                  className={`absolute bottom-2 right-2 text-xs font-bold px-2 py-1 rounded-full text-white ${
-                    card.parallel === 'Gold'
-                      ? 'bg-yellow-600'
-                      : card.parallel === 'Red'
-                      ? 'bg-red-600'
-                      : card.parallel === 'Orange'
-                      ? 'bg-orange-500'
-                      : 'bg-blue-500'
+                  className={`absolute bottom-2 right-2 text-xs font-bold px-2 py-1 rounded-full ${
+                    ParallelStyles.get(card.parallel) ?? 'bg-gray-100 text-gray-800'
                   }`}
                 >
                   {card.parallel}
@@ -171,7 +168,7 @@ const CardDisplayItem: React.FC<CardDisplayItemProps> = ({
             className="bg-white p-2 rounded-full hover:bg-gray-100 transition border border-gray-300"
             onClick={(e) => {
               e.stopPropagation();
-              setIsFlipped(!isFlipped);
+              setIsFlipped(enable3d ? !isFlipped : false);
             }}
             title="View Details"
           >
