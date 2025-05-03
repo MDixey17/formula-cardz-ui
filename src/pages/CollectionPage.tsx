@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import CardDisplayItem from '../components/ui/CardDisplayItem';
 import { Grid, List, Filter, SortAsc, SortDesc, FileCog, Plus, Edit2, Trash2 } from 'lucide-react';
+import {ParallelStyles} from "../constants/globalStyles.ts";
+import {Card} from "../types";
 
 const CollectionPage: React.FC = () => {
-  const { cards, cardOwnerships, addCardToCollection, removeCardFromCollection, updateCardOwnership } = useApp();
+  const { cards, cardOwnerships, yearDropdown, addCardToCollection, removeCardFromCollection, updateCardOwnership } = useApp();
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [sortBy, setSortBy] = useState<string>('driver');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
@@ -21,6 +22,13 @@ const CollectionPage: React.FC = () => {
   const [editPurchasePrice, setEditPurchasePrice] = useState<string>('');
   const [editNotes, setEditNotes] = useState('');
   const [editLocation, setEditLocation] = useState('');
+  const [newYear, setNewYear] = useState('2025');
+  const [newCardId, setNewCardId] = useState<string>('');
+  const [newQuantity, setNewQuantity] = useState(1);
+  const [newCondition, setNewCondition] = useState('Raw');
+  const [newPurchasePrice, setNewPurchasePrice] = useState<string>('');
+  const [newNotes, setNewNotes] = useState('');
+  const [newLocation, setNewLocation] = useState('');
 
   // Get unique values for filters
   const uniqueDrivers = Array.from(new Set(cards.map(card => card.driverName)));
@@ -113,6 +121,33 @@ const CollectionPage: React.FC = () => {
       removeCardFromCollection(cardId);
     }
   };
+
+  const handleAddCard = () => {
+    const card = cards.find(c => c.id === newCardId);
+    if (!card) return;
+
+    addCardToCollection(card, newQuantity, newCondition);
+    setShowAddModal(false);
+    resetNewCardForm();
+  };
+
+  const resetNewCardForm = () => {
+    setNewCardId('');
+    setNewQuantity(1);
+    setNewCondition('Raw');
+    setNewPurchasePrice('');
+    setNewNotes('');
+    setNewLocation('');
+  };
+
+  const sortCardOptions = (a: Card, b: Card) => {
+    const aNumber = Number(a.cardNumber)
+    const bNumber = Number(b.cardNumber)
+    if (isNaN(aNumber) || isNaN(bNumber)) {
+      return a.cardNumber.localeCompare(b.cardNumber)
+    }
+    return aNumber - bNumber;
+  }
 
   return (
       <div className="py-6 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
@@ -383,7 +418,7 @@ const CollectionPage: React.FC = () => {
                               </div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm font-medium text-gray-900">{card.driverName}</div>
+                              <div className="text-sm font-medium text-gray-900">#{card.cardNumber} {card.driverName}</div>
                               <div className="text-sm text-gray-500">{card.constructorName}</div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
@@ -392,12 +427,7 @@ const CollectionPage: React.FC = () => {
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                            card.parallel === 'Base' ? 'bg-gray-100 text-gray-800' :
-                                card.parallel === 'Refractor' ? 'bg-blue-100 text-blue-800' :
-                                    card.parallel === 'Gold' ? 'bg-yellow-100 text-yellow-800' :
-                                        card.parallel === 'Red' ? 'bg-red-100 text-red-800' :
-                                            card.parallel === 'Orange' ? 'bg-orange-100 text-orange-800' :
-                                                'bg-purple-100 text-purple-800'
+                          ParallelStyles.get(card.parallel) ?? 'bg-gray-100 text-gray-800'
                         }`}>
                           {card.parallel}
                         </span>
@@ -437,6 +467,121 @@ const CollectionPage: React.FC = () => {
                   </div>
               )}
             </>
+        )}
+
+        {/* Add Card Modal */}
+        {showAddModal && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+              <div className="bg-white p-6 rounded-lg max-w-md w-full">
+                <h3 className="text-xl font-bold mb-4">Add Card to Collection</h3>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Year</label>
+                    <select
+                        value={newYear}
+                        onChange={(e) => setNewYear(e.target.value)}
+                        className="w-full p-2 border border-gray-300 rounded-md"
+                    >
+                      {yearDropdown.map((item) => (
+                          <option value={item.value}>{item.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Select Card</label>
+                    <select
+                        value={newCardId}
+                        onChange={(e) => setNewCardId(e.target.value)}
+                        className="w-full p-2 border border-gray-300 rounded-md"
+                    >
+                      <option value="">Choose a card...</option>
+                      {cards
+                          .filter((c) => newYear === '' || Number(newYear) === c.year)
+                          .sort(sortCardOptions)
+                          .map(card => (
+                            <option key={card.id} value={card.id}>
+                              #{card.cardNumber} {card.driverName} - {card.setName} {card.parallel}
+                            </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Quantity</label>
+                    <input
+                        type="number"
+                        min="1"
+                        value={newQuantity}
+                        onChange={(e) => setNewQuantity(parseInt(e.target.value))}
+                        className="w-full p-2 border border-gray-300 rounded-md"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Condition</label>
+                    <select
+                        value={newCondition}
+                        onChange={(e) => setNewCondition(e.target.value)}
+                        className="w-full p-2 border border-gray-300 rounded-md"
+                    >
+                      <option value="Raw">Raw</option>
+                      <option value="PSA 10">PSA 10</option>
+                      <option value="PSA 9">PSA 9</option>
+                      <option value="PSA 8">PSA 8</option>
+                      <option value="BGS 9.5">BGS 9.5</option>
+                      <option value="BGS 9">BGS 9</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Purchase Price</label>
+                    <input
+                        type="number"
+                        step="0.01"
+                        value={newPurchasePrice}
+                        onChange={(e) => setNewPurchasePrice(e.target.value)}
+                        className="w-full p-2 border border-gray-300 rounded-md"
+                        placeholder="Optional"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                    <textarea
+                        value={newNotes}
+                        onChange={(e) => setNewNotes(e.target.value)}
+                        className="w-full p-2 border border-gray-300 rounded-md"
+                        placeholder="Optional"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Storage Location</label>
+                    <input
+                        type="text"
+                        value={newLocation}
+                        onChange={(e) => setNewLocation(e.target.value)}
+                        className="w-full p-2 border border-gray-300 rounded-md"
+                        placeholder="e.g., Binder, Display Case"
+                    />
+                  </div>
+                </div>
+                <div className="mt-6 flex justify-end space-x-3">
+                  <button
+                      onClick={() => {
+                        setShowAddModal(false);
+                        resetNewCardForm();
+                      }}
+                      className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                      onClick={handleAddCard}
+                      disabled={!newCardId}
+                      className="px-4 py-2 bg-[#0600E1] text-white rounded-md hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                  >
+                    Add Card
+                  </button>
+                </div>
+              </div>
+            </div>
         )}
 
         {/* Edit Card Modal */}

@@ -71,14 +71,50 @@ export interface GrailListEntry {
 // Card Condition Options
 export enum CardCondition {
   RAW = "Raw",
+  EXCELLENT = "Excellent",
+  NEAR_MINT = "Near Mint",
+  MINT = "Mint",
   PSA_10 = "PSA 10",
   PSA_9 = "PSA 9",
   PSA_8 = "PSA 8",
   PSA_7 = "PSA 7",
+  PSA_6 = "PSA 6",
   BGS_10 = "BGS 10",
   BGS_9_5 = "BGS 9.5",
   BGS_9 = "BGS 9",
+  BGS_8_5 = "BGS 8.5",
+  BGS_8 = "BGS 8",
+  BGS_7_5 = "BGS 7.5",
+  BGS_7 = "BGS 7",
   SGC_10 = "SGC 10",
   SGC_9_5 = "SGC 9.5",
+  SGC_9 = "SGC 9",
+  SGC_8_5 = "SGC 8.5",
+  SGC_8 = "SGC 8",
+  SGC_7_5 = "SGC 7.5",
+  SGC_7 = "SGC 7",
   OTHER = "Other"
+}
+
+// Marketplace listings
+export interface MarketplaceListing {
+  id: string;
+  cardId: string;
+  source: string;
+  price: number;
+  condition: string;
+  sellerRating: number;
+  listingUrl: string;
+  listingDate: Date;
+}
+
+// Card drops calendar
+export interface CardDrop {
+  id: string;
+  productName: string;
+  releaseDate: Date;
+  description: string;
+  manufacturer: string;
+  imageUrl: string;
+  preorderUrl?: string;
 }

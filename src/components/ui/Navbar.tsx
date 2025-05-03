@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Trophy, User, Search, Menu, X, Heart, Sun, Moon } from 'lucide-react';
+import { User, Menu, X, Sun, Moon } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useTheme } from '../../context/ThemeContext';
 
@@ -15,8 +15,9 @@ const Navbar: React.FC = () => {
         <div className="flex justify-between h-16">
           <div className="flex items-center">
             <Link to="/" className="flex-shrink-0 flex items-center">
-              <Trophy className="h-8 w-8 text-[#E10600]" />
-              <span className="ml-2 text-xl font-bold text-[#0600E1] dark:text-white">Formula Cardz</span>
+              <span className="ml-2 text-xl font-bold text-black dark:text-white">
+                <span className="ml-2 text-xl font-bold text-[#E10600]">Formula</span>Cardz
+              </span>
             </Link>
             <div className="hidden md:ml-6 md:flex md:space-x-6">
               <Link
@@ -24,6 +25,12 @@ const Navbar: React.FC = () => {
                 className="text-gray-700 dark:text-gray-300 hover:text-[#E10600] dark:hover:text-[#E10600] px-3 py-2 text-sm font-medium transition-colors duration-200"
               >
                 My Collection
+              </Link>
+              <Link
+                  to="/grail-list"
+                  className="text-gray-700 dark:text-gray-300 hover:text-[#E10600] dark:hover:text-[#E10600] px-3 py-2 text-sm font-medium transition-colors duration-200"
+              >
+                My Grail
               </Link>
               <Link
                 to="/marketplace"
@@ -52,16 +59,6 @@ const Navbar: React.FC = () => {
             </div>
           </div>
           <div className="hidden md:flex items-center">
-            <div className="relative mx-4">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Search className="h-5 w-5 text-gray-400" />
-              </div>
-              <input
-                type="text"
-                placeholder="Search cards..."
-                className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md leading-5 bg-white dark:bg-gray-700 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-white focus:outline-none focus:ring-[#0600E1] focus:border-[#0600E1] sm:text-sm transition duration-150 ease-in-out"
-              />
-            </div>
             <div className="flex items-center ml-4 space-x-4">
               <button
                 onClick={toggleTheme}
@@ -69,12 +66,6 @@ const Navbar: React.FC = () => {
               >
                 {theme === 'dark' ? <Sun className="h-6 w-6" /> : <Moon className="h-6 w-6" />}
               </button>
-              <Link
-                to="/grail-list"
-                className="text-gray-700 dark:text-gray-300 hover:text-[#E10600] dark:hover:text-[#E10600] p-1 rounded-full focus:outline-none"
-              >
-                <Heart className="h-6 w-6" />
-              </Link>
               <Link
                 to="/profile"
                 className="flex items-center text-gray-700 dark:text-gray-300 hover:text-[#E10600] dark:hover:text-[#E10600]"
@@ -188,18 +179,6 @@ const Navbar: React.FC = () => {
                 <div className="text-sm font-medium text-gray-500 dark:text-gray-400">
                   {user.email}
                 </div>
-              </div>
-            </div>
-            <div className="mt-3 px-2 space-y-1">
-              <div className="relative mx-4 my-2">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Search className="h-5 w-5 text-gray-400" />
-                </div>
-                <input
-                  type="text"
-                  placeholder="Search cards..."
-                  className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md leading-5 bg-white dark:bg-gray-700 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-white focus:outline-none focus:ring-[#0600E1] focus:border-[#0600E1] sm:text-sm transition duration-150 ease-in-out"
-                />
               </div>
             </div>
           </div>

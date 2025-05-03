@@ -1,4 +1,14 @@
-import { Card, CardBattle, CardOwnership, GrailListEntry, MarketPriceSnapshot, User } from "../types";
+import {
+  Card,
+  CardBattle,
+  CardCondition, CardDrop,
+  CardOwnership,
+  GrailListEntry,
+  MarketplaceListing,
+  MarketPriceSnapshot,
+  User
+} from "../types";
+import {Dropdown} from "../types/Dropdown.ts";
 
 // Mock current user
 export const currentUser: User = {
@@ -33,7 +43,7 @@ export const mockCards: Card[] = [
     driverName: "Lewis Hamilton",
     constructorName: "Mercedes",
     rookieCard: false,
-    parallel: "Black Refractor",
+    parallel: "Black",
     printRun: 10,
     cardImageUrl: "https://i5.walmartimages.com/seo/F1-2023-Topps-Chrome-Formula-1-Lewis-Hamilton-186_862e549e-f9e5-4ddf-a8e1-da67d948f873.4f74167e07da8ac74821fa0a36408086.jpeg"
   },
@@ -95,7 +105,7 @@ export const mockCardOwnerships: CardOwnership[] = [
     quantity: 2,
     purchasePrice: 5.99,
     purchaseDate: new Date("2023-02-10"),
-    condition: "PSA 10",
+    condition: CardCondition.PSA_10,
     notes: "Bought at local card shop",
     location: "Display case"
   },
@@ -106,7 +116,7 @@ export const mockCardOwnerships: CardOwnership[] = [
     quantity: 1,
     purchasePrice: 89.99,
     purchaseDate: new Date("2023-03-15"),
-    condition: "Raw",
+    condition: CardCondition.RAW,
     notes: "eBay purchase",
     location: "Toploader"
   },
@@ -117,7 +127,7 @@ export const mockCardOwnerships: CardOwnership[] = [
     quantity: 3,
     purchasePrice: 12.99,
     purchaseDate: new Date("2023-01-20"),
-    condition: "PSA 9",
+    condition: CardCondition.PSA_9,
     notes: "Rookie card",
     location: "Binder"
   }
@@ -230,18 +240,6 @@ export const mockGrailEntries: GrailListEntry[] = [
   }
 ];
 
-// Marketplace listings
-export interface MarketplaceListing {
-  id: string;
-  cardId: string;
-  source: string;
-  price: number;
-  condition: string;
-  sellerRating: number;
-  listingUrl: string;
-  listingDate: Date;
-}
-
 export const mockMarketplaceListings: MarketplaceListing[] = [
   {
     id: "listing1",
@@ -295,22 +293,11 @@ export const mockMarketplaceListings: MarketplaceListing[] = [
   }
 ];
 
-// Card drops calendar
-export interface CardDrop {
-  id: string;
-  productName: string;
-  releaseDate: Date;
-  description: string;
-  manufacturer: string;
-  imageUrl: string;
-  preorderUrl?: string;
-}
-
 export const mockCardDrops: CardDrop[] = [
   {
     id: "drop1",
-    productName: "2023 Topps Chrome Formula 1 Racing",
-    releaseDate: new Date("2023-09-15"),
+    productName: "2025 Topps Chrome Formula 1 Racing",
+    releaseDate: new Date("2025-05-15"),
     description: "Premier F1 trading card product with on-card autographs and rare parallels",
     manufacturer: "Topps",
     imageUrl: "https://images.pexels.com/photos/12318239/pexels-photo-12318239.jpeg?auto=compress&cs=tinysrgb&w=400",
@@ -318,8 +305,8 @@ export const mockCardDrops: CardDrop[] = [
   },
   {
     id: "drop2",
-    productName: "2023 Topps Finest Formula 1",
-    releaseDate: new Date("2023-10-20"),
+    productName: "2025 Topps Finest Formula 1",
+    releaseDate: new Date("2025-10-20"),
     description: "Premium offering with etched foil designs and low-numbered autographs",
     manufacturer: "Topps",
     imageUrl: "https://images.pexels.com/photos/12692092/pexels-photo-12692092.jpeg?auto=compress&cs=tinysrgb&w=400",
@@ -327,10 +314,37 @@ export const mockCardDrops: CardDrop[] = [
   },
   {
     id: "drop3",
-    productName: "2023 Topps Dynasty Formula 1",
-    releaseDate: new Date("2023-12-08"),
+    productName: "2025 Topps Dynasty Formula 1",
+    releaseDate: new Date("2025-12-08"),
     description: "Ultra-premium, high-end product with one on-card autograph relic per box",
     manufacturer: "Topps",
     imageUrl: "https://images.pexels.com/photos/12702993/pexels-photo-12702993.jpeg?auto=compress&cs=tinysrgb&w=400"
   }
 ];
+
+export const mockYearDropdown: Dropdown[] = [
+  {
+    label: '2025',
+    value: '2025',
+  },
+  {
+    label: '2024',
+    value: '2024',
+  },
+  {
+    label: '2023',
+    value: '2023',
+  },
+  {
+    label: '2022',
+    value: '2022',
+  },
+  {
+    label: '2021',
+    value: '2021',
+  },
+  {
+    label: '2020',
+    value: '2020',
+  },
+]
