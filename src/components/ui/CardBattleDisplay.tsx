@@ -1,6 +1,6 @@
 import React from 'react';
 import { Card, CardBattle } from '../../types';
-import { Trophy, ArrowRight } from 'lucide-react';
+import { Trophy } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 
 interface CardBattleDisplayProps {
@@ -58,11 +58,11 @@ const CardBattleDisplay: React.FC<CardBattleDisplayProps> = ({
           className={`w-full md:w-[45%] ${isActive ? 'cursor-pointer transform transition-transform hover:scale-105' : ''}`}
           onClick={isActive ? () => handleVote(1) : undefined}
         >
-          <div className={`relative rounded-lg overflow-hidden ${battle.votesCardOne > battle.votesCardTwo ? 'ring-2 ring-[#FFC800]' : ''}`}>
+          <div className={`relative rounded-lg overflow-hidden ${battle.votesCardOne > battle.votesCardTwo ? 'ring-2 ring-[#FFC800] bg-amber-300' : ''}`}>
             <img 
               src={cardOne.cardImageUrl} 
               alt={cardOne.driverName} 
-              className="w-full h-60 object-cover"
+              className="w-full h-60 object-contain"
             />
             <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black to-transparent">
               <div className="text-white">
@@ -103,11 +103,11 @@ const CardBattleDisplay: React.FC<CardBattleDisplayProps> = ({
           className={`w-full md:w-[45%] ${isActive ? 'cursor-pointer transform transition-transform hover:scale-105' : ''}`}
           onClick={isActive ? () => handleVote(2) : undefined}
         >
-          <div className={`relative rounded-lg overflow-hidden ${battle.votesCardTwo > battle.votesCardOne ? 'ring-2 ring-[#FFC800]' : ''}`}>
+          <div className={`relative rounded-lg overflow-hidden ${battle.votesCardTwo > battle.votesCardOne ? 'ring-2 ring-[#FFC800] bg-amber-300' : ''}`}>
             <img 
               src={cardTwo.cardImageUrl} 
               alt={cardTwo.driverName} 
-              className="w-full h-60 object-cover"
+              className="w-full h-60 object-contain"
             />
             <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black to-transparent">
               <div className="text-white">

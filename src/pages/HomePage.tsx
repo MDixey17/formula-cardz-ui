@@ -3,7 +3,6 @@ import { useApp } from '../context/AppContext';
 import CardDisplayItem from '../components/ui/CardDisplayItem';
 import PriceChart from '../components/ui/PriceChart';
 import CardBattleDisplay from '../components/ui/CardBattleDisplay';
-import { Search, TrendingUp, Flag, Calendar, CircleDollarSign } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const HomePage: React.FC = () => {
@@ -35,8 +34,8 @@ const HomePage: React.FC = () => {
   return (
     <div className="py-6 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
       {/* Hero Section */}
-      <div className="relative overflow-hidden bg-gradient-to-r from-[#E10600] to-[#0600E1] rounded-xl shadow-xl mb-8">
-        <div className="absolute inset-0 bg-[url('https://images.pexels.com/photos/12318239/pexels-photo-12318239.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2')] mix-blend-overlay opacity-30 bg-center bg-cover"></div>
+      <div className="relative overflow-hidden bg-gradient-to-r from-[#E10600] to-[#000000] rounded-xl shadow-xl mb-8">
+        <div className="absolute inset-0 bg-[url('https://media.formula1.com/image/upload/f_auto,c_limit,w_1440,q_auto/f_auto/q_auto/fom-website/Campaign/BGT/BGT%20Everything')] mix-blend-overlay opacity-30 bg-center bg-cover"></div>
         <div className="relative z-10 px-6 py-16 sm:px-12 sm:py-24 lg:py-32 lg:px-16 text-white">
           <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl lg:text-6xl">
             <span className="block">Formula Cardz</span>
@@ -58,40 +57,6 @@ const HomePage: React.FC = () => {
             >
               Explore Marketplace
             </Link>
-          </div>
-        </div>
-      </div>
-
-      {/* Quick Search */}
-      <div className="mb-8 bg-white p-6 rounded-lg shadow-md">
-        <div className="flex flex-col md:flex-row gap-4">
-          <div className="relative flex-grow">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Search className="h-5 w-5 text-gray-400" />
-            </div>
-            <input
-              type="text"
-              placeholder="Search for cards, drivers, or teams..."
-              className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-[#0600E1] focus:border-[#0600E1] sm:text-sm transition duration-150 ease-in-out"
-            />
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-            <button className="flex items-center justify-center bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium px-4 py-2 rounded-md transition">
-              <Flag className="h-4 w-4 mr-2" />
-              Drivers
-            </button>
-            <button className="flex items-center justify-center bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium px-4 py-2 rounded-md transition">
-              <Calendar className="h-4 w-4 mr-2" />
-              Years
-            </button>
-            <button className="flex items-center justify-center bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium px-4 py-2 rounded-md transition">
-              <TrendingUp className="h-4 w-4 mr-2" />
-              Trending
-            </button>
-            <button className="flex items-center justify-center bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium px-4 py-2 rounded-md transition">
-              <CircleDollarSign className="h-4 w-4 mr-2" />
-              Prices
-            </button>
           </div>
         </div>
       </div>

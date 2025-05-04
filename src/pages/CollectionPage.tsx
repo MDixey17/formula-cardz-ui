@@ -374,6 +374,27 @@ const CollectionPage: React.FC = () => {
                                   <span className="font-medium">${card.ownership.purchasePrice.toFixed(2)}</span>
                                 </div>
                             )}
+                            <div className="flex justify-start mt-2">
+                              {card.printRun && (
+                                  <div className="bg-black/70 text-xs font-bold px-2 py-1 rounded-full text-white mr-2">
+                                    /{card.printRun}
+                                  </div>
+                              )}
+                              {card.parallel !== 'Base' && (
+                                  <div
+                                      className={`text-xs font-bold px-2 py-1 rounded-full mr-2 ${
+                                          ParallelStyles.get(card.parallel) ?? 'bg-gray-100 text-gray-800'
+                                      }`}
+                                  >
+                                    {card.parallel}
+                                  </div>
+                              )}
+                              {card.rookieCard && (
+                                  <div className="bg-yellow-500 text-xs font-bold px-2 py-1 rounded-full text-white">
+                                    RC
+                                  </div>
+                              )}
+                            </div>
                           </div>
                         </div>
                     ))}

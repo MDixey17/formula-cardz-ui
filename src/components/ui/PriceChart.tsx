@@ -1,5 +1,14 @@
 import React from 'react';
 import { MarketPriceSnapshot } from '../../types';
+import {
+    LineChart,
+    Line,
+    XAxis,
+    YAxis,
+    Tooltip,
+    ResponsiveContainer,
+    CartesianGrid,
+} from 'recharts';
 
 interface PriceChartProps {
   priceData: MarketPriceSnapshot[];
@@ -10,10 +19,14 @@ const PriceChart: React.FC<PriceChartProps> = ({ priceData, cardId }) => {
   // Filter price data for the specific card
   const cardPriceData = priceData.filter((snapshot) => snapshot.cardId === cardId);
 
-  // Sort data by timestamp
-  const sortedData = [...cardPriceData].sort(
-    (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-  );
+    // Sort data by timestamp
+    const sortedData = [...cardPriceData]
+        .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
+        .map((entry) => ({
+            ...entry,
+            rangeTop: entry.highestPrice,
+            rangeBottom: entry.lowestPrice,
+        }));
 
   // If there is no data, return a placeholder
   if (sortedData.length === 0) {
@@ -24,136 +37,60 @@ const PriceChart: React.FC<PriceChartProps> = ({ priceData, cardId }) => {
     );
   }
 
-  // Find min and max values for scaling
-  const maxPrice = Math.max(...sortedData.map((data) => data.highestPrice));
-  const minPrice = Math.min(...sortedData.map((data) => data.lowestPrice));
-  const range = maxPrice - minPrice;
-
-  // Helper function to format dates
-  const formatDate = (dateString: Date) => {
-    const date = new Date(dateString);
-    return `${date.getMonth() + 1}/${date.getDate()}/${date.getFullYear().toString().slice(2)}`;
-  };
-
   return (
     <div className="p-4 bg-white rounded-lg shadow">
       <h3 className="text-lg font-bold mb-4">Price History</h3>
       <div className="h-48 relative">
-        {/* Chart grid */}
-        <div className="absolute inset-0 flex flex-col justify-between">
-          {[0, 1, 2, 3, 4].map((i) => (
-            <div
-              key={i}
-              className="border-t border-gray-200 w-full h-0"
-              style={{ top: `${(i * 100) / 4}%` }}
-            ></div>
-          ))}
-        </div>
+          <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={sortedData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis
+                      dataKey="timestamp"
+                      tickFormatter={(value) =>
+                          new Date(value).toLocaleDateString(undefined, {
+                              month: 'short',
+                              day: 'numeric',
+                          })
+                      }
+                  />
+                  <YAxis />
+                  <Tooltip
+                      formatter={(value: number, name: string) => {
+                          // Create a mapping from data keys to display names
+                          const labelMap: Record<string, string> = {
+                              averagePrice: 'Average Price',
+                              rangeTop: 'Highest Price',
+                              rangeBottom: 'Lowest Price',
+                          };
 
-        {/* Price lines */}
-        <div className="absolute inset-0 pt-4 pb-6">
-          <svg width="100%" height="100%" className="overflow-visible">
-            {/* Average price line */}
-            <polyline
-              points={sortedData
-                .map((data, index) => {
-                  const x = (index / (sortedData.length - 1)) * 100;
-                  const normalizedPrice =
-                    range === 0
-                      ? 50
-                      : 100 - ((data.averagePrice - minPrice) / range) * 100;
-                  return `${x}% ${normalizedPrice}%`;
-                })
-                .join(' ')}
-              fill="none"
-              stroke="#E10600"
-              strokeWidth="2"
-            />
+                          const displayName = labelMap[name] || name;
 
-            {/* Highest and lowest price area */}
-            <path
-              d={`
-                M${(0 / (sortedData.length - 1)) * 100}% ${
-                100 - ((sortedData[0].highestPrice - minPrice) / range) * 100
-              }%
-                ${sortedData
-                  .map((data, index) => {
-                    const x = (index / (sortedData.length - 1)) * 100;
-                    const normalizedPrice =
-                      range === 0
-                        ? 50
-                        : 100 - ((data.highestPrice - minPrice) / range) * 100;
-                    return `L${x}% ${normalizedPrice}%`;
-                  })
-                  .join(' ')}
-                L${((sortedData.length - 1) / (sortedData.length - 1)) * 100}% ${
-                100 - ((sortedData[sortedData.length - 1].lowestPrice - minPrice) / range) * 100
-              }%
-                ${sortedData
-                  .map((data, index) => {
-                    const reverseIndex = sortedData.length - 1 - index;
-                    const x = (reverseIndex / (sortedData.length - 1)) * 100;
-                    const normalizedPrice =
-                      range === 0
-                        ? 50
-                        : 100 - ((data.lowestPrice - minPrice) / range) * 100;
-                    return `L${x}% ${normalizedPrice}%`;
-                  })
-                  .reverse()
-                  .join(' ')}
-                Z
-              `}
-              fill="rgba(225, 6, 0, 0.1)"
-              stroke="none"
-            />
+                          return [`$${value.toFixed(2)}`, displayName];
+                      }}
+                      labelFormatter={(label) =>
+                          new Date(label).toLocaleDateString(undefined, {
+                              year: 'numeric',
+                              month: 'short',
+                              day: 'numeric',
+                          })
+                      }
+                  />
 
-            {/* Point for each data point */}
-            {sortedData.map((data, index) => {
-              const x = (index / (sortedData.length - 1)) * 100;
-              const normalizedPrice =
-                range === 0 ? 50 : 100 - ((data.averagePrice - minPrice) / range) * 100;
-              return (
-                <circle
-                  key={index}
-                  cx={`${x}%`}
-                  cy={`${normalizedPrice}%`}
-                  r="3"
-                  fill="#E10600"
-                />
-              );
-            })}
-          </svg>
-        </div>
+                  {/* Average price line */}
+                  <Line
+                      type="monotone"
+                      dataKey="averagePrice"
+                      stroke="#E10600"
+                      strokeWidth={2}
+                      dot={{ r: 3, fill: '#E10600' }}
+                      activeDot={{ r: 5 }}
+                  />
 
-        {/* Price labels */}
-        <div className="absolute left-0 inset-y-0 flex flex-col justify-between text-xs text-gray-500 pr-2">
-          {[0, 1, 2, 3, 4].map((i) => (
-            <div key={i} className="flex items-center h-6">
-              ${((maxPrice - (i * range) / 4) || 0).toFixed(2)}
-            </div>
-          ))}
-        </div>
-
-        {/* Date labels */}
-        <div className="absolute bottom-0 inset-x-0 flex justify-between text-xs text-gray-500 pt-1">
-          {sortedData.map((data, index) => (
-            <div key={index} className="text-center">
-              {formatDate(data.timestamp)}
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Legend */}
-      <div className="flex justify-center mt-4 text-sm">
-        <div className="flex items-center mr-4">
-          <div className="w-3 h-3 bg-[#E10600] rounded-full mr-1"></div>
-          <span>Average Price</span>
-        </div>
-        <div className="flex items-center">
-          <div className="w-3 h-3 bg-[rgba(225,6,0,0.1)] rounded-sm mr-1"></div>
-          <span>Price Range</span>
-        </div>
+                  {/* Invisible lines for highest and lowest to include in tooltip */}
+                  <Line type="monotone" dataKey="rangeTop" stroke="#6b7280" dot={false} />
+                  <Line type="monotone" dataKey="rangeBottom" stroke="#6b7280" dot={false} />
+              </LineChart>
+          </ResponsiveContainer>
       </div>
 
       {/* Current price summary */}

@@ -38,6 +38,8 @@ interface AppContextType {
   addCardToGrailList: (cardId: string) => void;
   removeCardFromGrailList: (cardId: string) => void;
   voteForCard: (battleId: string, cardIndex: 1 | 2) => void;
+  getOneOfOnesBySet: (setName: string, year: number) => Card[];
+  getAvailableSets: () => { setName: string; year: number }[];
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -133,6 +135,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     );
   };
 
+    const getOneOfOnesBySet = (setName: string, year: number) => {
+        return cards.filter(card =>
+            card.setName === setName &&
+            card.year === year &&
+            card.printRun === 1
+        );
+    };
+
+    const getAvailableSets = () => {
+        const sets = cards.reduce((acc: { setName: string; year: number }[], card) => {
+            const existingSet = acc.find(set => set.setName === card.setName && set.year === card.year);
+            if (!existingSet) {
+                acc.push({ setName: card.setName, year: card.year });
+            }
+            return acc;
+        }, []);
+
+        return sets.sort((a, b) => b.year - a.year);
+    };
+
   return (
       <AppContext.Provider
           value={{
@@ -151,6 +173,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             addCardToGrailList,
             removeCardFromGrailList,
             voteForCard,
+            getOneOfOnesBySet,
+            getAvailableSets,
           }}
       >
         {children}

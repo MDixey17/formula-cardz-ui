@@ -33,7 +33,9 @@ export const mockCards: Card[] = [
     rookieCard: false,
     parallel: "Superfractor",
     printRun: 1,
-    cardImageUrl: "https://d2tt46f3mh26nl.cloudfront.net/public/Lots/202404-0219-2042-f8387411-2004-4f98-8deb-84636c689a02/6aded069-3dd8-4dca-a9fe-965759f32a27@1x"
+    cardImageUrl: "https://d2tt46f3mh26nl.cloudfront.net/public/Lots/202404-0219-2042-f8387411-2004-4f98-8deb-84636c689a02/6aded069-3dd8-4dca-a9fe-965759f32a27@1x",
+    isOneOfOne: true,
+    isOneOfOneFound: false
   },
   {
     id: "card2",
@@ -45,7 +47,9 @@ export const mockCards: Card[] = [
     rookieCard: false,
     parallel: "Black",
     printRun: 10,
-    cardImageUrl: "https://i5.walmartimages.com/seo/F1-2023-Topps-Chrome-Formula-1-Lewis-Hamilton-186_862e549e-f9e5-4ddf-a8e1-da67d948f873.4f74167e07da8ac74821fa0a36408086.jpeg"
+    cardImageUrl: "https://i5.walmartimages.com/seo/F1-2023-Topps-Chrome-Formula-1-Lewis-Hamilton-186_862e549e-f9e5-4ddf-a8e1-da67d948f873.4f74167e07da8ac74821fa0a36408086.jpeg",
+    isOneOfOne: false,
+    isOneOfOneFound: false
   },
   {
     id: "card3",
@@ -57,7 +61,9 @@ export const mockCards: Card[] = [
     rookieCard: false,
     parallel: "Gold",
     printRun: 50,
-    cardImageUrl: "https://i.ebayimg.com/images/g/g1gAAOSw-zRl7Kfd/s-l1200.jpg"
+    cardImageUrl: "https://i.ebayimg.com/images/g/g1gAAOSw-zRl7Kfd/s-l1200.jpg",
+    isOneOfOne: false,
+    isOneOfOneFound: false
   },
   {
     id: "card4",
@@ -69,7 +75,9 @@ export const mockCards: Card[] = [
     rookieCard: false,
     parallel: "Orange",
     printRun: 25,
-    cardImageUrl: "https://images.production.sportscardinvestor.com/6853_1585_654_25-L"
+    cardImageUrl: "https://images.production.sportscardinvestor.com/6853_1585_654_25-L",
+    isOneOfOne: false,
+    isOneOfOneFound: false
   },
   {
     id: "card5",
@@ -81,7 +89,9 @@ export const mockCards: Card[] = [
     rookieCard: false,
     parallel: "Red",
     printRun: 5,
-    cardImageUrl: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQUhxp9AdNx-XSewlZcVgjCiWypiLonVDoRIA&s"
+    cardImageUrl: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQUhxp9AdNx-XSewlZcVgjCiWypiLonVDoRIA&s",
+    isOneOfOne: false,
+    isOneOfOneFound: false
   },
   {
     id: "card6",
@@ -92,7 +102,9 @@ export const mockCards: Card[] = [
     constructorName: "McLaren",
     rookieCard: true,
     parallel: "Base",
-    cardImageUrl: "https://cdn11.bigcommerce.com/s-bzjcg0/images/stencil/1280x1280/products/124985/186331/img_20240221_0016__34797.1708555011.jpg?c=2"
+    cardImageUrl: "https://cdn11.bigcommerce.com/s-bzjcg0/images/stencil/1280x1280/products/124985/186331/img_20240221_0016__34797.1708555011.jpg?c=2",
+    isOneOfOne: false,
+    isOneOfOneFound: false
   }
 ];
 
@@ -300,8 +312,7 @@ export const mockCardDrops: CardDrop[] = [
     releaseDate: new Date("2025-05-15"),
     description: "Premier F1 trading card product with on-card autographs and rare parallels",
     manufacturer: "Topps",
-    imageUrl: "https://images.pexels.com/photos/12318239/pexels-photo-12318239.jpeg?auto=compress&cs=tinysrgb&w=400",
-    preorderUrl: "#"
+    imageUrl: "https://images.footballfanatics.com/formula-1-merchandise/2024-topps-chrome-formula-1-factory-sealed-hobby-box_ss5_p-202512520+u-xwsxeygzlqazcjtdvb5t+v-tmjaw8g9rgqczjwfmruc.jpg?_hv=2",
   },
   {
     id: "drop2",
@@ -309,8 +320,7 @@ export const mockCardDrops: CardDrop[] = [
     releaseDate: new Date("2025-10-20"),
     description: "Premium offering with etched foil designs and low-numbered autographs",
     manufacturer: "Topps",
-    imageUrl: "https://images.pexels.com/photos/12692092/pexels-photo-12692092.jpeg?auto=compress&cs=tinysrgb&w=400",
-    preorderUrl: "#"
+    imageUrl: "https://dacardworld1.imgix.net/881841_004_040825.jpg?auto=format%2Ccompress&fm=jpg&h=1800&ixlib=php-3.3.1&w=1800&s=8401490e8291b9f2970a20238e70b3c5",
   },
   {
     id: "drop3",
@@ -318,7 +328,7 @@ export const mockCardDrops: CardDrop[] = [
     releaseDate: new Date("2025-12-08"),
     description: "Ultra-premium, high-end product with one on-card autograph relic per box",
     manufacturer: "Topps",
-    imageUrl: "https://images.pexels.com/photos/12702993/pexels-photo-12702993.jpeg?auto=compress&cs=tinysrgb&w=400"
+    imageUrl: "https://beckett-www.s3.amazonaws.com/news/news-content/uploads/2025/01/2024-Topps-Dynasty-Formula-1-Patch-Autograph-1.jpg"
   }
 ];
 

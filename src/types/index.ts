@@ -22,6 +22,8 @@ export interface Card {
   parallel: string;
   printRun?: number;
   cardImageUrl: string;
+  isOneOfOne: boolean
+  isOneOfOneFound?: boolean;
 }
 
 // Card Ownership type definition
