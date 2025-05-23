@@ -4,6 +4,7 @@ import CardDisplayItem from '../components/ui/CardDisplayItem';
 import MarketplaceListing from '../components/ui/MarketplaceListing';
 import PriceChart from '../components/ui/PriceChart';
 import { Grid, List, Search, Filter, SortAsc, SortDesc } from 'lucide-react';
+import {ParallelStyles} from "../constants/globalStyles.ts";
 
 const MarketplacePage: React.FC = () => {
   const { cards, marketPriceSnapshots, marketplaceListings, grailEntries } = useApp();
@@ -254,6 +255,7 @@ const MarketplacePage: React.FC = () => {
                       .filter(snapshot => snapshot.cardId === selectedCard)
                       .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())[0]?.averagePrice
                   }
+                  enable3d
                 />
               </div>
             </div>
@@ -365,7 +367,7 @@ const MarketplacePage: React.FC = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">{card.driverName}</div>
+                      <div className="text-sm font-medium text-gray-900">#{card.cardNumber} {card.driverName}</div>
                       <div className="text-sm text-gray-500">{card.constructorName}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -374,12 +376,7 @@ const MarketplacePage: React.FC = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        card.parallel === 'Base' ? 'bg-gray-100 text-gray-800' :
-                        card.parallel === 'Refractor' ? 'bg-blue-100 text-blue-800' :
-                        card.parallel === 'Gold' ? 'bg-yellow-100 text-yellow-800' :
-                        card.parallel === 'Red' ? 'bg-red-100 text-red-800' :
-                        card.parallel === 'Orange' ? 'bg-orange-100 text-orange-800' :
-                        'bg-purple-100 text-purple-800'
+                          ParallelStyles.get(card.parallel) ?? 'bg-gray-100 text-gray-800'
                       }`}>
                         {card.parallel}
                       </span>

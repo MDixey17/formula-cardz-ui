@@ -1,6 +1,26 @@
 import React, { createContext, useContext, useState } from 'react';
-import { Card, CardBattle, CardOwnership, GrailListEntry, MarketPriceSnapshot, User } from '../types';
-import { currentUser, mockCardBattles, mockCardDrops, mockCardOwnerships, mockCards, mockGrailEntries, mockMarketPriceSnapshots, mockMarketplaceListings } from '../data/mockData';
+import {
+    Card,
+    CardBattle,
+    CardDrop,
+    CardOwnership,
+    GrailListEntry,
+    MarketplaceListing,
+    MarketPriceSnapshot,
+    User
+} from '../types';
+import {
+    currentUser,
+    mockCardBattles,
+    mockCardDrops,
+    mockCardOwnerships,
+    mockCards,
+    mockGrailEntries,
+    mockMarketPriceSnapshots,
+    mockMarketplaceListings,
+    mockYearDropdown
+} from '../data/mockData';
+import {Dropdown} from "../types/Dropdown.ts";
 
 interface AppContextType {
   user: User;
@@ -9,14 +29,17 @@ interface AppContextType {
   marketPriceSnapshots: MarketPriceSnapshot[];
   cardBattles: CardBattle[];
   grailEntries: GrailListEntry[];
-  marketplaceListings: any[];
-  cardDrops: any[];
+  marketplaceListings: MarketplaceListing[];
+  cardDrops: CardDrop[];
+  yearDropdown: Dropdown[]
   addCardToCollection: (card: Card, quantity: number, condition: string) => void;
   updateCardOwnership: (cardId: string, updates: Partial<CardOwnership>) => void;
   removeCardFromCollection: (cardId: string) => void;
   addCardToGrailList: (cardId: string) => void;
   removeCardFromGrailList: (cardId: string) => void;
   voteForCard: (battleId: string, cardIndex: 1 | 2) => void;
+  getOneOfOnesBySet: (setName: string, year: number) => Card[];
+  getAvailableSets: () => { setName: string; year: number }[];
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -28,8 +51,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [marketPriceSnapshots, setMarketPriceSnapshots] = useState<MarketPriceSnapshot[]>(mockMarketPriceSnapshots);
   const [cardBattles, setCardBattles] = useState<CardBattle[]>(mockCardBattles);
   const [grailEntries, setGrailEntries] = useState<GrailListEntry[]>(mockGrailEntries);
-  const [marketplaceListings, setMarketplaceListings] = useState<any[]>(mockMarketplaceListings);
-  const [cardDrops, setCardDrops] = useState<any[]>(mockCardDrops);
+  const [marketplaceListings, setMarketplaceListings] = useState<MarketplaceListing[]>(mockMarketplaceListings);
+  const [cardDrops, setCardDrops] = useState<CardDrop[]>(mockCardDrops);
+  const [yearDropdown, setYearDropdown] = useState<Dropdown[]>(mockYearDropdown)
 
   const addCardToCollection = (card: Card, quantity: number, condition: string) => {
     const existingOwnership = cardOwnerships.find(
@@ -111,6 +135,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     );
   };
 
+    const getOneOfOnesBySet = (setName: string, year: number) => {
+        return cards.filter(card =>
+            card.setName === setName &&
+            card.year === year &&
+            card.printRun === 1
+        );
+    };
+
+    const getAvailableSets = () => {
+        const sets = cards.reduce((acc: { setName: string; year: number }[], card) => {
+            const existingSet = acc.find(set => set.setName === card.setName && set.year === card.year);
+            if (!existingSet) {
+                acc.push({ setName: card.setName, year: card.year });
+            }
+            return acc;
+        }, []);
+
+        return sets.sort((a, b) => b.year - a.year);
+    };
+
   return (
       <AppContext.Provider
           value={{
@@ -122,12 +166,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             grailEntries,
             marketplaceListings,
             cardDrops,
+            yearDropdown,
             addCardToCollection,
             updateCardOwnership,
             removeCardFromCollection,
             addCardToGrailList,
             removeCardFromGrailList,
             voteForCard,
+            getOneOfOnesBySet,
+            getAvailableSets,
           }}
       >
         {children}

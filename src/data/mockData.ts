@@ -1,4 +1,14 @@
-import { Card, CardBattle, CardOwnership, GrailListEntry, MarketPriceSnapshot, User } from "../types";
+import {
+  Card,
+  CardBattle,
+  CardCondition, CardDrop,
+  CardOwnership,
+  GrailListEntry,
+  MarketplaceListing,
+  MarketPriceSnapshot,
+  User
+} from "../types";
+import {Dropdown} from "../types/Dropdown.ts";
 
 // Mock current user
 export const currentUser: User = {
@@ -23,7 +33,9 @@ export const mockCards: Card[] = [
     rookieCard: false,
     parallel: "Superfractor",
     printRun: 1,
-    cardImageUrl: "https://d2tt46f3mh26nl.cloudfront.net/public/Lots/202404-0219-2042-f8387411-2004-4f98-8deb-84636c689a02/6aded069-3dd8-4dca-a9fe-965759f32a27@1x"
+    cardImageUrl: "https://d2tt46f3mh26nl.cloudfront.net/public/Lots/202404-0219-2042-f8387411-2004-4f98-8deb-84636c689a02/6aded069-3dd8-4dca-a9fe-965759f32a27@1x",
+    isOneOfOne: true,
+    isOneOfOneFound: false
   },
   {
     id: "card2",
@@ -33,9 +45,11 @@ export const mockCards: Card[] = [
     driverName: "Lewis Hamilton",
     constructorName: "Mercedes",
     rookieCard: false,
-    parallel: "Black Refractor",
+    parallel: "Black",
     printRun: 10,
-    cardImageUrl: "https://i5.walmartimages.com/seo/F1-2023-Topps-Chrome-Formula-1-Lewis-Hamilton-186_862e549e-f9e5-4ddf-a8e1-da67d948f873.4f74167e07da8ac74821fa0a36408086.jpeg"
+    cardImageUrl: "https://i5.walmartimages.com/seo/F1-2023-Topps-Chrome-Formula-1-Lewis-Hamilton-186_862e549e-f9e5-4ddf-a8e1-da67d948f873.4f74167e07da8ac74821fa0a36408086.jpeg",
+    isOneOfOne: false,
+    isOneOfOneFound: false
   },
   {
     id: "card3",
@@ -47,7 +61,9 @@ export const mockCards: Card[] = [
     rookieCard: false,
     parallel: "Gold",
     printRun: 50,
-    cardImageUrl: "https://i.ebayimg.com/images/g/g1gAAOSw-zRl7Kfd/s-l1200.jpg"
+    cardImageUrl: "https://i.ebayimg.com/images/g/g1gAAOSw-zRl7Kfd/s-l1200.jpg",
+    isOneOfOne: false,
+    isOneOfOneFound: false
   },
   {
     id: "card4",
@@ -59,7 +75,9 @@ export const mockCards: Card[] = [
     rookieCard: false,
     parallel: "Orange",
     printRun: 25,
-    cardImageUrl: "https://images.production.sportscardinvestor.com/6853_1585_654_25-L"
+    cardImageUrl: "https://images.production.sportscardinvestor.com/6853_1585_654_25-L",
+    isOneOfOne: false,
+    isOneOfOneFound: false
   },
   {
     id: "card5",
@@ -71,7 +89,9 @@ export const mockCards: Card[] = [
     rookieCard: false,
     parallel: "Red",
     printRun: 5,
-    cardImageUrl: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQUhxp9AdNx-XSewlZcVgjCiWypiLonVDoRIA&s"
+    cardImageUrl: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQUhxp9AdNx-XSewlZcVgjCiWypiLonVDoRIA&s",
+    isOneOfOne: false,
+    isOneOfOneFound: false
   },
   {
     id: "card6",
@@ -82,7 +102,9 @@ export const mockCards: Card[] = [
     constructorName: "McLaren",
     rookieCard: true,
     parallel: "Base",
-    cardImageUrl: "https://cdn11.bigcommerce.com/s-bzjcg0/images/stencil/1280x1280/products/124985/186331/img_20240221_0016__34797.1708555011.jpg?c=2"
+    cardImageUrl: "https://cdn11.bigcommerce.com/s-bzjcg0/images/stencil/1280x1280/products/124985/186331/img_20240221_0016__34797.1708555011.jpg?c=2",
+    isOneOfOne: false,
+    isOneOfOneFound: false
   }
 ];
 
@@ -95,7 +117,7 @@ export const mockCardOwnerships: CardOwnership[] = [
     quantity: 2,
     purchasePrice: 5.99,
     purchaseDate: new Date("2023-02-10"),
-    condition: "PSA 10",
+    condition: CardCondition.PSA_10,
     notes: "Bought at local card shop",
     location: "Display case"
   },
@@ -106,7 +128,7 @@ export const mockCardOwnerships: CardOwnership[] = [
     quantity: 1,
     purchasePrice: 89.99,
     purchaseDate: new Date("2023-03-15"),
-    condition: "Raw",
+    condition: CardCondition.RAW,
     notes: "eBay purchase",
     location: "Toploader"
   },
@@ -117,7 +139,7 @@ export const mockCardOwnerships: CardOwnership[] = [
     quantity: 3,
     purchasePrice: 12.99,
     purchaseDate: new Date("2023-01-20"),
-    condition: "PSA 9",
+    condition: CardCondition.PSA_9,
     notes: "Rookie card",
     location: "Binder"
   }
@@ -230,18 +252,6 @@ export const mockGrailEntries: GrailListEntry[] = [
   }
 ];
 
-// Marketplace listings
-export interface MarketplaceListing {
-  id: string;
-  cardId: string;
-  source: string;
-  price: number;
-  condition: string;
-  sellerRating: number;
-  listingUrl: string;
-  listingDate: Date;
-}
-
 export const mockMarketplaceListings: MarketplaceListing[] = [
   {
     id: "listing1",
@@ -295,42 +305,56 @@ export const mockMarketplaceListings: MarketplaceListing[] = [
   }
 ];
 
-// Card drops calendar
-export interface CardDrop {
-  id: string;
-  productName: string;
-  releaseDate: Date;
-  description: string;
-  manufacturer: string;
-  imageUrl: string;
-  preorderUrl?: string;
-}
-
 export const mockCardDrops: CardDrop[] = [
   {
     id: "drop1",
-    productName: "2023 Topps Chrome Formula 1 Racing",
-    releaseDate: new Date("2023-09-15"),
+    productName: "2025 Topps Chrome Formula 1 Racing",
+    releaseDate: new Date("2025-05-15"),
     description: "Premier F1 trading card product with on-card autographs and rare parallels",
     manufacturer: "Topps",
-    imageUrl: "https://images.pexels.com/photos/12318239/pexels-photo-12318239.jpeg?auto=compress&cs=tinysrgb&w=400",
-    preorderUrl: "#"
+    imageUrl: "https://images.footballfanatics.com/formula-1-merchandise/2024-topps-chrome-formula-1-factory-sealed-hobby-box_ss5_p-202512520+u-xwsxeygzlqazcjtdvb5t+v-tmjaw8g9rgqczjwfmruc.jpg?_hv=2",
   },
   {
     id: "drop2",
-    productName: "2023 Topps Finest Formula 1",
-    releaseDate: new Date("2023-10-20"),
+    productName: "2025 Topps Finest Formula 1",
+    releaseDate: new Date("2025-10-20"),
     description: "Premium offering with etched foil designs and low-numbered autographs",
     manufacturer: "Topps",
-    imageUrl: "https://images.pexels.com/photos/12692092/pexels-photo-12692092.jpeg?auto=compress&cs=tinysrgb&w=400",
-    preorderUrl: "#"
+    imageUrl: "https://dacardworld1.imgix.net/881841_004_040825.jpg?auto=format%2Ccompress&fm=jpg&h=1800&ixlib=php-3.3.1&w=1800&s=8401490e8291b9f2970a20238e70b3c5",
   },
   {
     id: "drop3",
-    productName: "2023 Topps Dynasty Formula 1",
-    releaseDate: new Date("2023-12-08"),
+    productName: "2025 Topps Dynasty Formula 1",
+    releaseDate: new Date("2025-12-08"),
     description: "Ultra-premium, high-end product with one on-card autograph relic per box",
     manufacturer: "Topps",
-    imageUrl: "https://images.pexels.com/photos/12702993/pexels-photo-12702993.jpeg?auto=compress&cs=tinysrgb&w=400"
+    imageUrl: "https://beckett-www.s3.amazonaws.com/news/news-content/uploads/2025/01/2024-Topps-Dynasty-Formula-1-Patch-Autograph-1.jpg"
   }
 ];
+
+export const mockYearDropdown: Dropdown[] = [
+  {
+    label: '2025',
+    value: '2025',
+  },
+  {
+    label: '2024',
+    value: '2024',
+  },
+  {
+    label: '2023',
+    value: '2023',
+  },
+  {
+    label: '2022',
+    value: '2022',
+  },
+  {
+    label: '2021',
+    value: '2021',
+  },
+  {
+    label: '2020',
+    value: '2020',
+  },
+]

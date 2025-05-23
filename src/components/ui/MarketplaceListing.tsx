@@ -1,6 +1,6 @@
 import React from 'react';
 import { Card } from '../../types';
-import { ExternalLink, Star, DollarSign } from 'lucide-react';
+import { ExternalLink, Star } from 'lucide-react';
 
 interface MarketplaceListingProps {
   listing: {
@@ -17,10 +17,6 @@ interface MarketplaceListingProps {
 }
 
 const MarketplaceListing: React.FC<MarketplaceListingProps> = ({ listing, card }) => {
-  const formatDate = (date: Date) => {
-    const d = new Date(date);
-    return d.toLocaleDateString();
-  };
 
   const daysAgo = (date: Date) => {
     const today = new Date();
