@@ -1,10 +1,13 @@
+import {EnrichedParallel} from "./response/Cards.ts";
+import {MarketPriceSnapshot} from "./response/MarketPrice.ts";
+import {CardBattleCard} from "./response/CardBattleResponse.ts";
+
 // User type definition
 export interface User {
   id: string;
   username: string;
   email: string;
   profileImageUrl?: string;
-  joinDate: Date;
   favoriteDrivers: string[];
   favoriteConstructors: string[];
 }
@@ -19,54 +22,57 @@ export interface Card {
   constructorName: string;
   subset?: string;
   rookieCard: boolean;
-  parallel: string;
-  printRun?: number;
-  cardImageUrl: string;
-  isOneOfOne: boolean
-  isOneOfOneFound?: boolean;
+  baseImageUrl: string;
+  hasOneOfOne: boolean
+  parallels: EnrichedParallel[];
 }
 
 // Card Ownership type definition
 export interface CardOwnership {
-  id: string;
-  userId: string;
-  cardId: string;
-  quantity: number;
-  purchasePrice?: number;
-  purchaseDate?: Date;
-  condition: string;
-  notes?: string;
-  location?: string;
+  id: string
+  year: number
+  setName: string
+  cardNumber: string
+  driverName: string
+  constructorName: string
+  rookieCard: boolean
+  parallel?: string
+  printRun?: number
+  imageUrl: string
+  quantity: number
+  condition: string
+  purchasePrice?: number
+  purchaseDate?: Date
 }
 
 // Market Price Snapshot type definition
-export interface MarketPriceSnapshot {
-  id: string;
-  cardId: string;
-  timestamp: Date;
-  source: string;
-  averagePrice: number;
-  lowestPrice: number;
-  highestPrice: number;
+export interface MarketPrice {
+  cardId: string
+  history: MarketPriceSnapshot[]
 }
 
 // Card Battle type definition
 export interface CardBattle {
-  id: string;
-  cardOneId: string;
-  cardTwoId: string;
+  battleId: string;
+  cardOne: CardBattleCard;
+  cardTwo: CardBattleCard;
   votesCardOne: number;
   votesCardTwo: number;
-  createdAt: Date;
   expiresAt: Date;
 }
 
 // Grail List Entry type definition
 export interface GrailListEntry {
-  id: string;
-  userId: string;
-  cardId: string;
-  createdAt: Date;
+  id: string
+  year: number
+  setName: string
+  cardNumber: string
+  driverName: string
+  constructorName: string
+  rookieCard: boolean
+  parallel?: string
+  printRun?: number
+  imageUrl: string
   notifyOnAvailable: boolean;
 }
 
@@ -112,7 +118,6 @@ export interface MarketplaceListing {
 
 // Card drops calendar
 export interface CardDrop {
-  id: string;
   productName: string;
   releaseDate: Date;
   description: string;

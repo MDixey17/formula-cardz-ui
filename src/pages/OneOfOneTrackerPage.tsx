@@ -1,21 +1,47 @@
-import React, { useState } from 'react';
+import React, {useEffect, useState} from 'react';
 import { useApp } from '../context/AppContext';
 import CardDisplayItem from '../components/ui/CardDisplayItem';
 import { Search, Filter, Grid, List, SortAsc, SortDesc } from 'lucide-react';
+import {Dropdown} from "../types/Dropdown.ts";
+import {DropdownService} from "../service/dropdownService.ts";
+import {Card} from "../types";
+import {OneOfOneCardResponse} from "../types/response/Cards.ts";
 
 const OneOfOneTrackerPage: React.FC = () => {
-  const { getOneOfOnesBySet, getAvailableSets } = useApp();
+  const { getOneOfOnesBySet } = useApp();
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [showFilters, setShowFilters] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedSet, setSelectedSet] = useState<{ setName: string; year: number } | null>(null);
+  const [selectedSet, setSelectedSet] = useState<string | null>(null);
   const [filterDriver, setFilterDriver] = useState<string>('');
   const [filterTeam, setFilterTeam] = useState<string>('');
   const [sortBy, setSortBy] = useState<string>('driver');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [setsDropdown, setSetsDropdown] = useState<Dropdown[]>([]);
+  const [oneOfOneCards, setOneOfOneCards] = useState<OneOfOneCardResponse[]>([]);
 
-  const availableSets = getAvailableSets();
-  const oneOfOneCards = selectedSet ? getOneOfOnesBySet(selectedSet.setName, selectedSet.year) : [];
+  useEffect(() => {
+    const getDropdowns = async () => {
+      const sets = await DropdownService.getSetsDropdown()
+      setSetsDropdown(sets)
+    }
+
+    getDropdowns();
+  }, []);
+
+  useEffect(() => {
+    if (!selectedSet) {
+      setOneOfOneCards([])
+      return;
+    }
+
+    const getOneOfOnes = async () => {
+      const data = await getOneOfOnesBySet(selectedSet);
+      setOneOfOneCards(data)
+    }
+
+    getOneOfOnes();
+  }, [selectedSet, getOneOfOnesBySet]);
 
   // Get unique values for filters from the current set's cards
   const uniqueDrivers = Array.from(new Set(oneOfOneCards.map(card => card.driverName)));
@@ -59,9 +85,15 @@ const OneOfOneTrackerPage: React.FC = () => {
   // Stats for the selected set
   const totalOneOfOnes = oneOfOneCards.length;
   const foundCount = oneOfOneCards.filter(card =>
-      card.isOneOfOne && card.isOneOfOneFound === true
+      card.parallels.some((p) => p.isOneOfOneFound === true)
   ).length;
   const missingCount = totalOneOfOnes - foundCount;
+
+  const buildCardFromOneOfOne = (oneOfOne: OneOfOneCardResponse, imageUrl: string): Card => ({
+    ...oneOfOne,
+    baseImageUrl: imageUrl,
+    hasOneOfOne: true
+  })
 
   return (
       <div className="py-6 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
@@ -104,11 +136,10 @@ const OneOfOneTrackerPage: React.FC = () => {
             Select Set
           </label>
           <select
-              value={selectedSet ? `${selectedSet.setName}-${selectedSet.year}` : ''}
+              value={selectedSet ? `${selectedSet}` : ''}
               onChange={(e) => {
                 if (e.target.value) {
-                  const [setName, year] = e.target.value.split('-');
-                  setSelectedSet({ setName, year: parseInt(year) });
+                  setSelectedSet(e.target.value);
                   // Reset filters when changing sets
                   setFilterDriver('');
                   setFilterTeam('');
@@ -120,9 +151,9 @@ const OneOfOneTrackerPage: React.FC = () => {
               className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
           >
             <option value="">Select a set...</option>
-            {availableSets.map(set => (
-                <option key={`${set.setName}-${set.year}`} value={`${set.setName}-${set.year}`}>
-                  {set.setName} ({set.year})
+            {setsDropdown.map(set => (
+                <option key={set.value} value={set.value}>
+                  {set.label}
                 </option>
             ))}
           </select>
@@ -223,77 +254,84 @@ const OneOfOneTrackerPage: React.FC = () => {
                   </div>
               ) : viewMode === 'grid' ? (
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-                    {sortedCards.map((card) => (
-                        <div key={card.id} className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-                          <CardDisplayItem card={card} showActions={false} />
-                          <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700">
-                            <div className="text-sm font-medium text-gray-900 dark:text-white">
-                              #{card.cardNumber} {card.driverName}
-                            </div>
-                            <div className="text-sm text-gray-500 dark:text-gray-400">
-                              {card.setName} ({card.year})
-                            </div>
-                            <div className="text-sm font-medium text-gray-900 dark:text-white">
-                              {card.parallel}
-                            </div>
-                            <div className="mt-1">
+                    {sortedCards.map((card) =>
+                      card.parallels.map((parallel) => (
+                          <div key={`${parallel.name}-${card.id}`} className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+                            <CardDisplayItem card={buildCardFromOneOfOne(card, parallel.imageUrl ?? '')} showActions={false}/>
+                            <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700">
+                              <div className="text-sm font-medium text-gray-900 dark:text-white">
+                                #{card.cardNumber} {card.driverName}
+                              </div>
+                              <div className="text-sm text-gray-500 dark:text-gray-400">
+                                {card.setName}
+                              </div>
+                              <div className="text-sm font-medium text-gray-900 dark:text-white">
+                                {parallel.name}
+                              </div>
+                              <div className="mt-1">
                       <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                          card.isOneOfOne && card.isOneOfOneFound === true
+                          parallel.isOneOfOne === true && parallel.isOneOfOneFound === true
                               ? 'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100'
                               : 'bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100'
                       }`}>
-                        {card.isOneOfOne && card.isOneOfOneFound === true ? 'Found' : 'Missing'}
+                        {parallel.isOneOfOne === true && parallel.isOneOfOneFound === true ? 'Found' : 'Missing'}
                       </span>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                    ))}
+                      ))
+                    )}
                   </div>
               ) : (
                   <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
                     <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                       <thead className="bg-gray-50 dark:bg-gray-900">
                       <tr>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                        <th scope="col"
+                            className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                           Card
                         </th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                        <th scope="col"
+                            className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                           Driver / Team
                         </th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                        <th scope="col"
+                            className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                           Parallel
                         </th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                        <th scope="col"
+                            className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                           Status
                         </th>
                       </tr>
                       </thead>
                       <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                      {sortedCards.map((card) => (
-                          <tr key={card.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="h-10 w-10 rounded-md overflow-hidden">
-                                <img src={card.cardImageUrl} alt={card.driverName} className="h-full w-full object-cover" />
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm font-medium text-gray-900 dark:text-white">{card.driverName}</div>
-                              <div className="text-sm text-gray-500 dark:text-gray-400">{card.constructorName}</div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <span className="text-sm text-gray-900 dark:text-white">{card.parallel}</span>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
+                      {sortedCards.map((card) =>
+                        card.parallels.map((parallel) => (
+                            <tr key={`${parallel.name}-${card.id}`} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="h-10 w-10 rounded-md overflow-hidden">
+                                  <img src={parallel.imageUrl} alt={card.driverName} className="h-full w-full object-cover" />
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="text-sm font-medium text-gray-900 dark:text-white">{card.driverName}</div>
+                                <div className="text-sm text-gray-500 dark:text-gray-400">{card.constructorName}</div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <span className="text-sm text-gray-900 dark:text-white">{parallel.name}</span>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            card.isOneOfOne && card.isOneOfOneFound === true
+                            parallel.isOneOfOne === true && parallel.isOneOfOneFound === true
                                 ? 'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100'
                                 : 'bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100'
                         }`}>
-                          {card.isOneOfOne && card.isOneOfOneFound === true ? 'Found' : 'Missing'}
+                          {parallel.isOneOfOne === true && parallel.isOneOfOneFound === true ? 'Found' : 'Missing'}
                         </span>
-                            </td>
-                          </tr>
-                      ))}
+                              </td>
+                            </tr>
+                        )))}
                       </tbody>
                     </table>
                   </div>

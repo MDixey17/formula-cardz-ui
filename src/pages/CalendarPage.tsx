@@ -1,12 +1,23 @@
-import React, { useState } from 'react';
+import React, {useEffect, useState} from 'react';
 import { useApp } from '../context/AppContext';
 import CalendarCard from '../components/ui/CalendarCard';
 import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
+import {CardDrop} from "../types";
 
 const CalendarPage: React.FC = () => {
-  const { cardDrops } = useApp();
+  const { getCardDrops } = useApp();
   const [currentMonth, setCurrentMonth] = useState<number>(new Date().getMonth());
   const [currentYear, setCurrentYear] = useState<number>(new Date().getFullYear());
+  const [cardDrops, setCardDrops] = useState<CardDrop[]>([])
+
+  useEffect(() => {
+    const getAllCardDrops = async () => {
+      const data = await getCardDrops();
+      setCardDrops(data);
+    }
+
+    getAllCardDrops();
+  }, [getCardDrops])
 
   // Month navigation
   const nextMonth = () => {
@@ -188,7 +199,7 @@ const CalendarPage: React.FC = () => {
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredDrops.map(product => (
-              <CalendarCard key={product.id} product={product} />
+              <CalendarCard key={product.productName} product={product} />
             ))}
           </div>
         </div>
@@ -203,7 +214,7 @@ const CalendarPage: React.FC = () => {
         
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {upcomingDrops.map(product => (
-            <CalendarCard key={product.id} product={product} />
+            <CalendarCard key={product.productName} product={product} />
           ))}
         </div>
       </div>

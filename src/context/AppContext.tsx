@@ -1,172 +1,268 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, {createContext, useContext, useEffect, useState} from 'react';
 import {
     Card,
     CardBattle,
     CardDrop,
     CardOwnership,
-    GrailListEntry,
-    MarketplaceListing,
-    MarketPriceSnapshot,
+    GrailListEntry, MarketPrice,
     User
 } from '../types';
+import {AuthService} from "../service/authService.ts";
+import {CardOwnershipService} from "../service/ownershipService.ts";
 import {
-    currentUser,
-    mockCardBattles,
-    mockCardDrops,
-    mockCardOwnerships,
-    mockCards,
-    mockGrailEntries,
-    mockMarketPriceSnapshots,
-    mockMarketplaceListings,
-    mockYearDropdown
-} from '../data/mockData';
-import {Dropdown} from "../types/Dropdown.ts";
+    AddCardToCollectionRequest,
+    RemoveCardFromCollectionRequest,
+    UpdateCardInCollectionRequest
+} from "../types/request/CardCollection.ts";
+import {AddGrailRequest, RemoveGrailRequest} from "../types/request/Grail.ts";
+import {OneOfOneCardResponse} from "../types/response/Cards.ts";
+import {GrailService} from "../service/grailService.ts";
+import {CardBattleService} from "../service/cardBattleService.ts";
+import {OneOfOneService} from "../service/oneOfOneService.ts";
+import {DropdownService} from "../service/dropdownService.ts";
+import {CardDropService} from "../service/cardDropService.ts";
+import {CardService} from "../service/cardService.ts";
+import {MarketPriceService} from "../service/marketPriceService.ts";
 
 interface AppContextType {
-  user: User;
-  cards: Card[];
+  user: User | null;
   cardOwnerships: CardOwnership[];
-  marketPriceSnapshots: MarketPriceSnapshot[];
-  cardBattles: CardBattle[];
   grailEntries: GrailListEntry[];
-  marketplaceListings: MarketplaceListing[];
-  cardDrops: CardDrop[];
-  yearDropdown: Dropdown[]
-  addCardToCollection: (card: Card, quantity: number, condition: string) => void;
-  updateCardOwnership: (cardId: string, updates: Partial<CardOwnership>) => void;
-  removeCardFromCollection: (cardId: string) => void;
-  addCardToGrailList: (cardId: string) => void;
-  removeCardFromGrailList: (cardId: string) => void;
-  voteForCard: (battleId: string, cardIndex: 1 | 2) => void;
-  getOneOfOnesBySet: (setName: string, year: number) => Card[];
-  getAvailableSets: () => { setName: string; year: number }[];
+  login: (email: string, password: string) => Promise<void>
+  register: (email: string, password: string, username: string) => Promise<void>
+  logout: () => Promise<void>
+  addCardToCollection: (card: AddCardToCollectionRequest) => Promise<void>;
+  updateCardOwnership: (card: UpdateCardInCollectionRequest) => Promise<void>;
+  removeCardFromCollection: (card: RemoveCardFromCollectionRequest) => Promise<void>;
+  addCardToGrailList: (card: AddGrailRequest) => Promise<void>;
+  removeCardFromGrailList: (card: RemoveGrailRequest) => Promise<void>;
+  voteForCard: (battleId: string, cardIndex: 1 | 2) => Promise<CardBattle[]>;
+  getOneOfOnesBySet: (setName: string, driverName?: string, isFound?: boolean) => Promise<OneOfOneCardResponse[]>;
+  getAvailableSets: () => Promise<{ setName: string; year: number }[]>;
+  getCardDrops: () => Promise<CardDrop[]>;
+  getCardsByCriteria: (year?: number, setName?: string, driverName?: string, constructorName?: string, cardNumber?: string) => Promise<Card[]>
+  getMarketPriceByCardId: (cardId: string, parallel?: string) => Promise<MarketPrice>;
+  getCardBattles: () => Promise<CardBattle[]>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User>(currentUser);
-  const [cards, setCards] = useState<Card[]>(mockCards);
-  const [cardOwnerships, setCardOwnerships] = useState<CardOwnership[]>(mockCardOwnerships);
-  const [marketPriceSnapshots, setMarketPriceSnapshots] = useState<MarketPriceSnapshot[]>(mockMarketPriceSnapshots);
-  const [cardBattles, setCardBattles] = useState<CardBattle[]>(mockCardBattles);
-  const [grailEntries, setGrailEntries] = useState<GrailListEntry[]>(mockGrailEntries);
-  const [marketplaceListings, setMarketplaceListings] = useState<MarketplaceListing[]>(mockMarketplaceListings);
-  const [cardDrops, setCardDrops] = useState<CardDrop[]>(mockCardDrops);
-  const [yearDropdown, setYearDropdown] = useState<Dropdown[]>(mockYearDropdown)
+  const [user, setUser] = useState<User | null>(null);
+  const [cardOwnerships, setCardOwnerships] = useState<CardOwnership[]>([]);
+  const [grailEntries, setGrailEntries] = useState<GrailListEntry[]>([]);
 
-  const addCardToCollection = (card: Card, quantity: number, condition: string) => {
-    const existingOwnership = cardOwnerships.find(
-        (ownership) => ownership.cardId === card.id && ownership.condition === condition
-    );
-
-    if (existingOwnership) {
-      setCardOwnerships(
-          cardOwnerships.map((ownership) =>
-              ownership.id === existingOwnership.id
-                  ? { ...ownership, quantity: ownership.quantity + quantity }
-                  : ownership
-          )
-      );
-    } else {
-      const newOwnership: CardOwnership = {
-        id: `ownership${cardOwnerships.length + 1}`,
-        userId: user.id,
-        cardId: card.id,
-        quantity,
-        condition,
-        purchaseDate: new Date(),
-      };
-      setCardOwnerships([...cardOwnerships, newOwnership]);
-    }
-  };
-
-  const updateCardOwnership = (cardId: string, updates: Partial<CardOwnership>) => {
-    setCardOwnerships(
-        cardOwnerships.map((ownership) =>
-            ownership.cardId === cardId
-                ? { ...ownership, ...updates }
-                : ownership
-        )
-    );
-  };
-
-  const removeCardFromCollection = (cardId: string) => {
-    setCardOwnerships(cardOwnerships.filter(ownership => ownership.cardId !== cardId));
-  };
-
-  const addCardToGrailList = (cardId: string) => {
-    const existingEntry = grailEntries.find(
-        (entry) => entry.cardId === cardId && entry.userId === user.id
-    );
-
-    if (!existingEntry) {
-      const newEntry: GrailListEntry = {
-        id: `grail${grailEntries.length + 1}`,
-        userId: user.id,
-        cardId,
-        createdAt: new Date(),
-        notifyOnAvailable: true,
-      };
-      setGrailEntries([...grailEntries, newEntry]);
-    }
-  };
-
-  const removeCardFromGrailList = (cardId: string) => {
-    setGrailEntries(
-        grailEntries.filter(
-            (entry) => !(entry.cardId === cardId && entry.userId === user.id)
-        )
-    );
-  };
-
-  const voteForCard = (battleId: string, cardIndex: 1 | 2) => {
-    setCardBattles(
-        cardBattles.map((battle) => {
-          if (battle.id === battleId) {
-            if (cardIndex === 1) {
-              return { ...battle, votesCardOne: battle.votesCardOne + 1 };
-            } else {
-              return { ...battle, votesCardTwo: battle.votesCardTwo + 1 };
-            }
+  useEffect(() => {
+      // Check if the last login in localStorage was over 24 hours ago
+      const lastLoginDateString = localStorage.getItem("lastLogin")
+      const lastUserString = localStorage.getItem("lastUser")
+      if (lastLoginDateString) {
+          const now = new Date();
+          const lastLoginDate = new Date(lastLoginDateString)
+          const logoutThreshold = 86400000
+          if (Math.abs(now.getTime() - lastLoginDate.getTime()) < logoutThreshold  && lastUserString) {
+              const lastUser = JSON.parse(lastUserString) as User
+              setUser(lastUser)
           }
-          return battle;
-        })
-    );
+      }
+  }, [])
+
+  useEffect(() => {
+      const updatedOwnershipAndGrails = async () => {
+          if (user) {
+              // Get card ownerships and grails
+              const ownershipData = await CardOwnershipService.getCardsOwnedByUserId(user.id)
+              const grailData = await GrailService.getUserGrailCards(user.id)
+              setCardOwnerships(ownershipData.map((c) => ({
+                  ...c
+              })))
+              setGrailEntries(grailData.map((grail) => ({
+                  ...grail
+              })))
+          }
+      }
+
+      updatedOwnershipAndGrails()
+  }, [user])
+
+  const login = async (email: string, password: string) => {
+      try {
+          const tokenResponse = await AuthService.login(email, password);
+          localStorage.setItem('token', tokenResponse.token)
+          localStorage.setItem('lastLogin', new Date().toDateString())
+          const user: User = {
+              id: tokenResponse.id,
+              username: tokenResponse.username,
+              email: tokenResponse.email,
+              profileImageUrl: tokenResponse.profileImageUrl,
+              favoriteConstructors: tokenResponse.favoriteConstructors,
+              favoriteDrivers: tokenResponse.favoriteDrivers,
+          }
+          localStorage.setItem('lastUser', JSON.stringify(user));
+
+          setUser(user);
+      } catch (error) {
+          console.error('Error on login attempt: ', error)
+          throw new Error('Login failed!')
+      }
+  }
+
+  const register = async (email: string, password: string, username: string) => {
+      try {
+          const tokenResponse = await AuthService.register(email, password, username);
+          localStorage.setItem('token', tokenResponse.token)
+          localStorage.setItem('lastLogin', new Date().toDateString())
+          const user: User = {
+              id: tokenResponse.id,
+              username: tokenResponse.username,
+              email: tokenResponse.email,
+              profileImageUrl: tokenResponse.profileImageUrl,
+              favoriteConstructors: tokenResponse.favoriteConstructors,
+              favoriteDrivers: tokenResponse.favoriteDrivers,
+          }
+          localStorage.setItem('lastUser', JSON.stringify(user));
+          setUser(user);
+      } catch (error) {
+          console.error('Error on register attempt: ', error)
+          throw new Error('Register failed!')
+      }
+  }
+
+  const logout = async () => {
+      // Add logic to logout
+      setUser(null)
+  }
+
+  const addCardToCollection = async (card: AddCardToCollectionRequest) => {
+    if (user) {
+        await CardOwnershipService.addCardToCollection(card)
+        const collection = await CardOwnershipService.getCardsOwnedByUserId(user.id)
+        setCardOwnerships(collection)
+    } else {
+        throw new Error('Please login to add cards to your collection')
+    }
   };
 
-    const getOneOfOnesBySet = (setName: string, year: number) => {
-        return cards.filter(card =>
-            card.setName === setName &&
-            card.year === year &&
-            card.printRun === 1
-        );
+  const updateCardOwnership = async (card: UpdateCardInCollectionRequest) => {
+    if (user) {
+        await CardOwnershipService.updateCardInCollection(card)
+        const updatedCollection = await CardOwnershipService.getCardsOwnedByUserId(user.id)
+        setCardOwnerships(updatedCollection.map((card) => ({
+            ...card,
+        })))
+    }  else {
+        throw new Error('Please login to update cards in your collection')
+    }
+  };
+
+  const removeCardFromCollection = async (card: RemoveCardFromCollectionRequest) => {
+    if (user) {
+        await CardOwnershipService.removeCardFromCollection(card)
+        const updatedCollection = await CardOwnershipService.getCardsOwnedByUserId(user.id)
+        setCardOwnerships(updatedCollection.map((card) => ({
+            ...card,
+        })))
+    } else {
+        throw new Error('Please login to update cards in your collection')
+    }
+  };
+
+  const addCardToGrailList = async (card: AddGrailRequest) => {
+    if (user) {
+        const updatedGrailList = await GrailService.addCardToGrail(card)
+        setGrailEntries(updatedGrailList.map((grail) => ({
+            ...grail,
+        })))
+    } else {
+        throw new Error('Please login to add card to your grail list')
+    }
+  };
+
+  const removeCardFromGrailList = async (card: RemoveGrailRequest) => {
+      if (user) {
+          const updatedGrailList = await GrailService.removeCardFromGrail(card)
+          setGrailEntries(updatedGrailList.map((grail) => ({
+              ...grail,
+          })))
+      } else {
+          throw new Error('Please login to remove cards from your grail list')
+      }
+  };
+
+  const getCardBattles = async (): Promise<CardBattle[]> => {
+      const activeBattles = await CardBattleService.getActiveCardBattle()
+      const pastBattles = await CardBattleService.getPastCardBattles()
+      return activeBattles.concat(pastBattles).map((battle) => ({
+          battleId: battle.id,
+          cardOne: battle.cardOne,
+          cardTwo: battle.cardTwo,
+          votesCardOne: battle.votesCardOne,
+          votesCardTwo: battle.votesCardTwo,
+          expiresAt: battle.expiresAt,
+      }))
+  }
+
+  const voteForCard = async (battleId: string, cardIndex: 1 | 2) => {
+    if (user) {
+        await CardBattleService.voteOnCardBattle({
+            cardIndex: cardIndex === 1 ? 0 : 1,
+            battleId: battleId,
+            userId: user.id
+        })
+
+        return await getCardBattles()
+    } else {
+        throw new Error('Please login to vote in card battles')
+    }
+  };
+
+    const getOneOfOnesBySet = async (setName: string, driverName?: string, isFound?: boolean): Promise<OneOfOneCardResponse[]> => {
+        return await OneOfOneService.getOneOfOnesByCriteria(isFound, setName, driverName);
     };
 
-    const getAvailableSets = () => {
-        const sets = cards.reduce((acc: { setName: string; year: number }[], card) => {
-            const existingSet = acc.find(set => set.setName === card.setName && set.year === card.year);
-            if (!existingSet) {
-                acc.push({ setName: card.setName, year: card.year });
-            }
-            return acc;
-        }, []);
-
-        return sets.sort((a, b) => b.year - a.year);
+    const getAvailableSets = async () => {
+        return (await DropdownService.getSetsDropdown()).map((set) => ({
+            setName: set.label,
+            year: Number(set.label.substring(0, 4)),
+        }))
     };
+
+    const getCardDrops = async (): Promise<CardDrop[]> => {
+        return (await CardDropService.getCardDrops()).map((cardDrop) => ({
+            ...cardDrop,
+        }));
+    }
+
+    const getCardsByCriteria = async (year?: number, setName?: string, driverName?: string, constructorName?: string, cardNumber?: string): Promise<Card[]> => {
+        const cards = await CardService.getCardsByCriteria(year, setName, driverName, constructorName, cardNumber);
+        return cards.map((card) => ({
+            id: card.id,
+            year: card.year,
+            setName: card.setName,
+            cardNumber: card.cardNumber,
+            driverName: card.driverName,
+            constructorName: card.constructorName,
+            subset: card.subset,
+            rookieCard: card.rookieCard,
+            baseImageUrl: card.baseImageUrl,
+            hasOneOfOne: card.hasOneOfOne,
+            parallels: card.parallels
+        }))
+    }
+
+    const getMarketPriceByCardId = async (cardId: string, parallel?: string): Promise<MarketPrice> => {
+        return await MarketPriceService.getMarketPriceByCardId(cardId, parallel);
+    }
 
   return (
       <AppContext.Provider
           value={{
             user,
-            cards,
             cardOwnerships,
-            marketPriceSnapshots,
-            cardBattles,
             grailEntries,
-            marketplaceListings,
-            cardDrops,
-            yearDropdown,
+            register,
+            login,
+            logout,
             addCardToCollection,
             updateCardOwnership,
             removeCardFromCollection,
@@ -175,6 +271,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             voteForCard,
             getOneOfOnesBySet,
             getAvailableSets,
+            getCardDrops,
+            getCardsByCriteria,
+            getMarketPriceByCardId,
+            getCardBattles,
           }}
       >
         {children}

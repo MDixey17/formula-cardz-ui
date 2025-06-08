@@ -1,30 +1,37 @@
-import React from 'react';
+import React, {useEffect, useState} from 'react';
 import { useApp } from '../context/AppContext';
-import CardDisplayItem from '../components/ui/CardDisplayItem';
-import PriceChart from '../components/ui/PriceChart';
 import CardBattleDisplay from '../components/ui/CardBattleDisplay';
 import { Link } from 'react-router-dom';
+import {CardBattle, CardDrop} from "../types";
+import {CardBattleService} from "../service/cardBattleService.ts";
 
 const HomePage: React.FC = () => {
   const { 
-    cards, 
-    marketPriceSnapshots, 
-    cardBattles,
-    cardDrops,
-    grailEntries
+    getCardsByCriteria,
+    getCardBattles,
+    getCardDrops,
   } = useApp();
 
-  // Get active battle (today's battle)
-  const activeBattle = cardBattles.find(battle => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const battleDate = new Date(battle.createdAt);
-    battleDate.setHours(0, 0, 0, 0);
-    return battleDate.getTime() === today.getTime();
-  });
+  const [cardBattles, setCardBattles] = useState<CardBattle[]>([])
+  const [cardDrops, setCardDrops] = useState<CardDrop[]>([])
 
-  // Get today's highlighted card
-  const highlightedCard = cards[Math.floor(Math.random() * cards.length)];
+  useEffect(() => {
+    const getAllData = async () => {
+      const dropsResponse = await getCardDrops()
+      const activeCardBattles = await CardBattleService.getActiveCardBattle()
+
+      setCardBattles(activeCardBattles.map((battle) => ({
+        ...battle,
+        battleId: battle.id
+      })))
+      setCardDrops(dropsResponse)
+    }
+
+    getAllData()
+  }, [getCardsByCriteria, getCardBattles, getCardDrops])
+
+  // Get active battle (today's battle)
+  const activeBattle = cardBattles[cardBattles.length === 0 ? 0 : Math.floor(Math.random() * cardBattles.length)];
   
   // Get next upcoming card drop
   const nextDrop = [...cardDrops].sort((a, b) => 
@@ -68,20 +75,6 @@ const HomePage: React.FC = () => {
           {/* Featured Cards */}
           <div className="bg-white p-6 rounded-lg shadow-md">
             <h2 className="text-2xl font-bold mb-4">Featured Cards</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-              {cards.slice(0, 6).map((card) => (
-                <CardDisplayItem 
-                  key={card.id} 
-                  card={card}
-                  isInGrailList={grailEntries.some(entry => entry.cardId === card.id)}
-                  marketPrice={
-                    marketPriceSnapshots
-                      .filter(snapshot => snapshot.cardId === card.id)
-                      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())[0]?.averagePrice
-                  }
-                />
-              ))}
-            </div>
             <div className="mt-6 text-center">
               <Link
                 to="/marketplace"
@@ -98,8 +91,6 @@ const HomePage: React.FC = () => {
               <h2 className="text-2xl font-bold mb-4">Today's Card Battle</h2>
               <CardBattleDisplay 
                 battle={activeBattle}
-                cardOne={cards.find(card => card.id === activeBattle.cardOneId)!}
-                cardTwo={cards.find(card => card.id === activeBattle.cardTwoId)!}
                 isActive={true}
               />
               <div className="mt-6 text-center">
@@ -116,27 +107,6 @@ const HomePage: React.FC = () => {
 
         {/* Right Column */}
         <div className="space-y-8">
-          {/* Card of the Day */}
-          {highlightedCard && (
-            <div className="bg-white p-6 rounded-lg shadow-md">
-              <h2 className="text-2xl font-bold mb-4">Card of the Day</h2>
-              <div className="mx-auto max-w-[240px]">
-                <CardDisplayItem 
-                  card={highlightedCard}
-                  isInGrailList={grailEntries.some(entry => entry.cardId === highlightedCard.id)}
-                  marketPrice={
-                    marketPriceSnapshots
-                      .filter(snapshot => snapshot.cardId === highlightedCard.id)
-                      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())[0]?.averagePrice
-                  }
-                />
-              </div>
-              <div className="mt-6">
-                <PriceChart priceData={marketPriceSnapshots} cardId={highlightedCard.id} />
-              </div>
-            </div>
-          )}
-
           {/* Next Drop */}
           {nextDrop && (
             <div className="bg-white p-6 rounded-lg shadow-md">

@@ -1,11 +1,13 @@
-import React, { useState } from 'react';
+import React, {useEffect, useMemo, useState} from 'react';
 import { useApp } from '../context/AppContext';
-import { Grid, List, Filter, SortAsc, SortDesc, FileCog, Plus, Edit2, Trash2 } from 'lucide-react';
+import {Grid, List, Filter, SortAsc, SortDesc, FileCog, Plus, Edit2, Trash2, Search, X} from 'lucide-react';
 import {ParallelStyles} from "../constants/globalStyles.ts";
 import {Card} from "../types";
+import {Dropdown} from "../types/Dropdown.ts";
+import {DropdownService} from "../service/dropdownService.ts";
 
 const CollectionPage: React.FC = () => {
-  const { cards, cardOwnerships, yearDropdown, addCardToCollection, removeCardFromCollection, updateCardOwnership } = useApp();
+  const { user, cardOwnerships, addCardToCollection, removeCardFromCollection, updateCardOwnership, getCardsByCriteria } = useApp();
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [sortBy, setSortBy] = useState<string>('driver');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
@@ -20,37 +22,79 @@ const CollectionPage: React.FC = () => {
   const [editQuantity, setEditQuantity] = useState(1);
   const [editCondition, setEditCondition] = useState('Raw');
   const [editPurchasePrice, setEditPurchasePrice] = useState<string>('');
-  const [editNotes, setEditNotes] = useState('');
-  const [editLocation, setEditLocation] = useState('');
-  const [newYear, setNewYear] = useState('2025');
+
+  // Add card modal states
+  const [selectedSet, setSelectedSet] = useState<string>('2020 Topps Chrome Formula 1')
+  const [selectedParallel, setSelectedParallel] = useState<string>('')
+  const [cardSearchQuery, setCardSearchQuery] = useState<string>('')
+  const [showCardDropdown, setShowCardDropdown] = useState<boolean>(false)
   const [newCardId, setNewCardId] = useState<string>('');
   const [newQuantity, setNewQuantity] = useState(1);
   const [newCondition, setNewCondition] = useState('Raw');
   const [newPurchasePrice, setNewPurchasePrice] = useState<string>('');
-  const [newNotes, setNewNotes] = useState('');
-  const [newLocation, setNewLocation] = useState('');
+
+  // Dropdowns
+  const [parallelDropdown, setParallelDropdown] = useState<Dropdown[]>([])
+  const [setsDropdown, setSetsDropdown] = useState<Dropdown[]>([])
+  const [cards, setCards] = useState<Card[]>([])
+
+  useEffect(() => {
+    const getDropdowns = async () => {
+      const sets = await DropdownService.getSetsDropdown();
+      setSetsDropdown(sets);
+    }
+
+    getDropdowns()
+  }, [])
+
+  useEffect(() => {
+    const getPossibleParallels = async () => {
+      const possibleParallels = await DropdownService.getParallelDropdown(selectedSet)
+      const possibleCards = await getCardsByCriteria(undefined, selectedSet, undefined, undefined, undefined)
+      setParallelDropdown(possibleParallels);
+      setCards(possibleCards);
+    }
+
+    getPossibleParallels();
+  }, [selectedSet, getCardsByCriteria])
 
   // Get unique values for filters
-  const uniqueDrivers = Array.from(new Set(cards.map(card => card.driverName)));
-  const uniqueTeams = Array.from(new Set(cards.map(card => card.constructorName)));
-  const uniqueParallels = Array.from(new Set(cards.map(card => card.parallel)));
+  const uniqueDrivers = Array.from(new Set(cardOwnerships.map(card => card.driverName)));
+  const uniqueTeams = Array.from(new Set(cardOwnerships.map(card => card.constructorName)));
+  const uniqueParallels = Array.from(new Set(cardOwnerships.map(card => card.parallel)));
   const uniqueConditions = Array.from(new Set(cardOwnerships.map(ownership => ownership.condition)));
 
-  // Get cards in collection with all necessary data
-  const collectionCards = cardOwnerships.map(ownership => {
-    const card = cards.find(card => card.id === ownership.cardId);
-    return {
-      ...card,
-      ownership
-    };
-  }).filter(item => item) as (typeof cards[0] & { ownership: typeof cardOwnerships[0] })[];
+  // Get filtered cards for autocomplete
+  const filteredCardsForAdd = useMemo(() => {
+    if (!selectedSet) return [];
+
+    const [setName, year] = selectedSet.split('|');
+    let filteredCards = cards.filter(card =>
+        card.setName === setName && card.year === parseInt(year)
+    );
+
+    if (selectedParallel) {
+      filteredCards = filteredCards.filter(card => card.parallels.some((p) => p.name === selectedParallel));
+    }
+
+    if (cardSearchQuery) {
+      const query = cardSearchQuery.toLowerCase();
+      filteredCards = filteredCards.filter(card =>
+          card.driverName.toLowerCase().includes(query) ||
+          card.constructorName.toLowerCase().includes(query) ||
+          card.cardNumber.includes(query)
+      );
+    }
+
+    return filteredCards.slice(0, 10); // Limit to 10 results for performance
+  }, [selectedSet, selectedParallel, cardSearchQuery, cards])
 
   // Apply filters
-  const filteredCards = collectionCards.filter(card => {
+  const filteredCards = cardOwnerships.filter(card => {
     if (filterDriver && card.driverName !== filterDriver) return false;
     if (filterTeam && card.constructorName !== filterTeam) return false;
     if (filterParallel && card.parallel !== filterParallel) return false;
-    if (filterCondition && card.ownership.condition !== filterCondition) return false;
+    if (filterCondition && card.condition !== filterCondition) return false;
     return true;
   });
 
@@ -69,10 +113,10 @@ const CollectionPage: React.FC = () => {
         comparison = a.year - b.year;
         break;
       case 'quantity':
-        comparison = a.ownership.quantity - b.ownership.quantity;
+        comparison = a.quantity - b.quantity;
         break;
       case 'condition':
-        comparison = a.ownership.condition.localeCompare(b.ownership.condition);
+        comparison = a.condition.localeCompare(b.condition);
         break;
       default:
         comparison = a.driverName.localeCompare(b.driverName);
@@ -84,70 +128,79 @@ const CollectionPage: React.FC = () => {
   // Collection stats
   const totalCards = cardOwnerships.reduce((sum, ownership) => sum + ownership.quantity, 0);
   const uniqueCardsCount = cardOwnerships.length;
-  const rookieCardsCount = collectionCards.filter(card => card.rookieCard).length;
-  const highestValueCard = collectionCards.sort((a, b) => {
-    const aValue = a.ownership.purchasePrice || 0;
-    const bValue = b.ownership.purchasePrice || 0;
+  const rookieCardsCount = cardOwnerships.filter(card => card.rookieCard).length;
+  const highestValueCard = cardOwnerships.sort((a, b) => {
+    const aValue = a.purchasePrice || 0;
+    const bValue = b.purchasePrice || 0;
     return bValue - aValue;
   })[0];
 
   const handleEditCard = (card: typeof sortedCards[0]) => {
     setSelectedCard(card.id);
-    setEditQuantity(card.ownership.quantity);
-    setEditCondition(card.ownership.condition);
-    setEditPurchasePrice(card.ownership.purchasePrice?.toString() || '');
-    setEditNotes(card.ownership.notes || '');
-    setEditLocation(card.ownership.location || '');
+    setEditQuantity(card.quantity);
+    setEditCondition(card.condition);
+    setEditPurchasePrice(card.purchasePrice?.toString() || '');
     setShowEditModal(true);
   };
 
-  const handleUpdateCard = () => {
+  const handleUpdateCard = async () => {
     if (!selectedCard) return;
 
-    updateCardOwnership(selectedCard, {
-      quantity: editQuantity,
-      condition: editCondition,
-      purchasePrice: editPurchasePrice ? parseFloat(editPurchasePrice) : undefined,
-      notes: editNotes,
-      location: editLocation
-    });
+    if (user) {
+      await updateCardOwnership({
+        userId: user.id,
+        cardId: selectedCard,
+        quantity: editQuantity,
+        purchasePrice: Number(editPurchasePrice),
+        condition: editCondition
+      });
+    }
 
     setShowEditModal(false);
     setSelectedCard(null);
   };
 
-  const handleDeleteCard = (cardId: string) => {
-    if (confirm('Are you sure you want to remove this card from your collection?')) {
-      removeCardFromCollection(cardId);
+  const handleDeleteCard = async (cardId: string, parallel?: string) => {
+    if (confirm('Are you sure you want to remove this card from your collection?') && user) {
+      await removeCardFromCollection({
+        userId: user.id,
+        cardId: cardId,
+        quantityToSubtract: editQuantity,
+        condition: editCondition,
+        parallel: parallel,
+      });
     }
   };
 
-  const handleAddCard = () => {
-    const card = cards.find(c => c.id === newCardId);
-    if (!card) return;
-
-    addCardToCollection(card, newQuantity, newCondition);
+  const handleAddCard = async () => {
+    if (user) {
+      await addCardToCollection({
+        userId: user.id,
+        cardId: newCardId,
+        quantity: newQuantity,
+        condition: newCondition,
+      });
+    }
     setShowAddModal(false);
     resetNewCardForm();
   };
 
   const resetNewCardForm = () => {
+    setSelectedSet('');
+    setSelectedParallel('');
+    setCardSearchQuery('');
     setNewCardId('');
     setNewQuantity(1);
     setNewCondition('Raw');
     setNewPurchasePrice('');
-    setNewNotes('');
-    setNewLocation('');
+    setShowCardDropdown(false);
   };
 
-  const sortCardOptions = (a: Card, b: Card) => {
-    const aNumber = Number(a.cardNumber)
-    const bNumber = Number(b.cardNumber)
-    if (isNaN(aNumber) || isNaN(bNumber)) {
-      return a.cardNumber.localeCompare(b.cardNumber)
-    }
-    return aNumber - bNumber;
-  }
+  const handleCardSelect = (card: typeof cards[0]) => {
+    setNewCardId(card.id);
+    setCardSearchQuery(`${card.driverName} - ${card.constructorName} #${card.cardNumber}`);
+    setShowCardDropdown(false);
+  };
 
   return (
       <div className="py-6 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
@@ -208,7 +261,7 @@ const CollectionPage: React.FC = () => {
           <div className="bg-white rounded-lg shadow p-4">
             <span className="text-gray-500 text-sm">Highest Value</span>
             <p className="text-2xl font-bold">
-              ${highestValueCard?.ownership.purchasePrice?.toFixed(2) || '0.00'}
+              ${highestValueCard?.purchasePrice?.toFixed(2) || '0.00'}
             </p>
           </div>
         </div>
@@ -336,10 +389,10 @@ const CollectionPage: React.FC = () => {
               {viewMode === 'grid' ? (
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
                     {sortedCards.map((card) => (
-                        <div key={`${card.id}-${card.ownership.condition}`} className="bg-white rounded-lg shadow p-4">
+                        <div key={`${card.id}-${card.condition}`} className="bg-white rounded-lg shadow p-4">
                           <div className="relative">
                             <div className="h-25 w-25 rounded-md overflow-hidden">
-                              <img src={card.cardImageUrl} alt={card.driverName}
+                              <img src={card.imageUrl} alt={card.driverName}
                                    className="h-full w-full object-cover"/>
                             </div>
                             <div className="absolute top-2 right-2 flex space-x-1">
@@ -362,16 +415,16 @@ const CollectionPage: React.FC = () => {
                           <div className="mt-2 pt-2 border-t border-gray-100">
                             <div className="flex justify-between text-sm">
                               <span className="text-gray-500">Quantity:</span>
-                              <span className="font-medium">{card.ownership.quantity}</span>
+                              <span className="font-medium">{card.quantity}</span>
                             </div>
                             <div className="flex justify-between text-sm mt-1">
                               <span className="text-gray-500">Condition:</span>
-                              <span className="font-medium">{card.ownership.condition}</span>
+                              <span className="font-medium">{card.condition}</span>
                             </div>
-                            {card.ownership.purchasePrice && (
+                            {card.purchasePrice && (
                                 <div className="flex justify-between text-sm mt-1">
                                   <span className="text-gray-500">Purchase:</span>
-                                  <span className="font-medium">${card.ownership.purchasePrice.toFixed(2)}</span>
+                                  <span className="font-medium">${card.purchasePrice.toFixed(2)}</span>
                                 </div>
                             )}
                             <div className="flex justify-start mt-2">
@@ -380,7 +433,7 @@ const CollectionPage: React.FC = () => {
                                     /{card.printRun}
                                   </div>
                               )}
-                              {card.parallel !== 'Base' && (
+                              {card.parallel && (
                                   <div
                                       className={`text-xs font-bold px-2 py-1 rounded-full mr-2 ${
                                           ParallelStyles.get(card.parallel) ?? 'bg-gray-100 text-gray-800'
@@ -432,10 +485,10 @@ const CollectionPage: React.FC = () => {
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
                       {sortedCards.map((card) => (
-                          <tr key={`${card.id}-${card.ownership.condition}`} className="hover:bg-gray-50">
+                          <tr key={`${card.id}-${card.condition}`} className="hover:bg-gray-50">
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div className="h-10 w-10 rounded-md overflow-hidden">
-                                <img src={card.cardImageUrl} alt={card.driverName} className="h-full w-full object-cover" />
+                                <img src={card.imageUrl} alt={card.driverName} className="h-full w-full object-cover" />
                               </div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
@@ -448,23 +501,23 @@ const CollectionPage: React.FC = () => {
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          ParallelStyles.get(card.parallel) ?? 'bg-gray-100 text-gray-800'
+                          ParallelStyles.get(card.parallel ?? 'Base') ?? 'bg-gray-100 text-gray-800'
                         }`}>
-                          {card.parallel}
+                          {card.parallel ?? 'Base'}
                         </span>
                               {card.printRun && (
                                   <span className="text-xs text-gray-500 ml-1">/{card.printRun}</span>
                               )}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              {card.ownership.condition}
+                              {card.condition}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              {card.ownership.quantity}
+                              {card.quantity}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              {card.ownership.purchasePrice
-                                  ? `$${card.ownership.purchasePrice.toFixed(2)}`
+                              {card.purchasePrice
+                                  ? `$${card.purchasePrice.toFixed(2)}`
                                   : '-'}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -493,39 +546,112 @@ const CollectionPage: React.FC = () => {
         {/* Add Card Modal */}
         {showAddModal && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-              <div className="bg-white p-6 rounded-lg max-w-md w-full">
+              <div className="bg-white p-6 rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
                 <h3 className="text-xl font-bold mb-4">Add Card to Collection</h3>
                 <div className="space-y-4">
+                  {/* Set Selection */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Year</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Select Set</label>
                     <select
-                        value={newYear}
-                        onChange={(e) => setNewYear(e.target.value)}
+                        value={selectedSet}
+                        onChange={(e) => {
+                          setSelectedSet(e.target.value);
+                          setSelectedParallel('');
+                          setCardSearchQuery('');
+                          setNewCardId('');
+                        }}
                         className="w-full p-2 border border-gray-300 rounded-md"
                     >
-                      {yearDropdown.map((item) => (
-                          <option value={item.value}>{item.label}</option>
+                      <option value="">Choose a set...</option>
+                      {setsDropdown.map(set => (
+                          <option key={set.value} value={set.value}>
+                            {set.label}
+                          </option>
                       ))}
                     </select>
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Select Card</label>
-                    <select
-                        value={newCardId}
-                        onChange={(e) => setNewCardId(e.target.value)}
-                        className="w-full p-2 border border-gray-300 rounded-md"
-                    >
-                      <option value="">Choose a card...</option>
-                      {cards
-                          .filter((c) => newYear === '' || Number(newYear) === c.year)
-                          .sort(sortCardOptions)
-                          .map(card => (
-                            <option key={card.id} value={card.id}>
-                              #{card.cardNumber} {card.driverName} - {card.setName} {card.parallel}
-                            </option>
-                      ))}
-                    </select>
-                  </div>
+
+                  {/* Parallel Selection */}
+                  {selectedSet && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Select Parallel (Optional)</label>
+                        <select
+                            value={selectedParallel}
+                            onChange={(e) => {
+                              setSelectedParallel(e.target.value);
+                              setCardSearchQuery('');
+                              setNewCardId('');
+                            }}
+                            className="w-full p-2 border border-gray-300 rounded-md"
+                        >
+                          <option value="">All Parallels</option>
+                          {parallelDropdown.map(parallel => (
+                              <option key={parallel.value} value={parallel.value}>{parallel.label}</option>
+                          ))}
+                        </select>
+                      </div>
+                  )}
+
+                  {/* Card Search with Autocomplete */}
+                  {selectedSet && (
+                      <div className="relative">
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Search for Card</label>
+                        <div className="relative">
+                          <input
+                              type="text"
+                              value={cardSearchQuery}
+                              onChange={(e) => {
+                                setCardSearchQuery(e.target.value);
+                                setShowCardDropdown(true);
+                                if (!e.target.value) {
+                                  setNewCardId('');
+                                }
+                              }}
+                              onFocus={() => setShowCardDropdown(true)}
+                              placeholder="Type driver name, team, or card number..."
+                              className="w-full p-2 border border-gray-300 rounded-md pr-8"
+                          />
+                          {cardSearchQuery && (
+                              <button
+                                  onClick={() => {
+                                    setCardSearchQuery('');
+                                    setNewCardId('');
+                                    setShowCardDropdown(false);
+                                  }}
+                                  className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                              >
+                                <X className="h-4 w-4" />
+                              </button>
+                          )}
+                          <div className="absolute left-2 top-1/2 transform -translate-y-1/2">
+                            <Search className="h-4 w-4 text-gray-400" />
+                          </div>
+                        </div>
+
+                        {/* Autocomplete Dropdown */}
+                        {showCardDropdown && cardSearchQuery && filteredCardsForAdd.length > 0 && (
+                            <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                              {filteredCardsForAdd.map(card => (
+                                  <button
+                                      key={card.id}
+                                      onClick={() => handleCardSelect(card)}
+                                      className="w-full px-3 py-2 text-left hover:bg-gray-50 flex items-center space-x-3"
+                                  >
+                                    <div className="flex-1">
+                                      <div className="text-sm font-medium text-gray-900">
+                                        {card.driverName} - {card.constructorName}
+                                      </div>
+                                      <div className="text-xs text-gray-500">
+                                        #{card.cardNumber}
+                                      </div>
+                                    </div>
+                                  </button>
+                              ))}
+                            </div>
+                        )}
+                      </div>
+                  )}
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Quantity</label>
                     <input
@@ -561,25 +687,6 @@ const CollectionPage: React.FC = () => {
                         onChange={(e) => setNewPurchasePrice(e.target.value)}
                         className="w-full p-2 border border-gray-300 rounded-md"
                         placeholder="Optional"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
-                    <textarea
-                        value={newNotes}
-                        onChange={(e) => setNewNotes(e.target.value)}
-                        className="w-full p-2 border border-gray-300 rounded-md"
-                        placeholder="Optional"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Storage Location</label>
-                    <input
-                        type="text"
-                        value={newLocation}
-                        onChange={(e) => setNewLocation(e.target.value)}
-                        className="w-full p-2 border border-gray-300 rounded-md"
-                        placeholder="e.g., Binder, Display Case"
                     />
                   </div>
                 </div>
@@ -646,25 +753,6 @@ const CollectionPage: React.FC = () => {
                         onChange={(e) => setEditPurchasePrice(e.target.value)}
                         className="w-full p-2 border border-gray-300 rounded-md"
                         placeholder="Optional"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
-                    <textarea
-                        value={editNotes}
-                        onChange={(e) => setEditNotes(e.target.value)}
-                        className="w-full p-2 border border-gray-300 rounded-md"
-                        placeholder="Optional"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Storage Location</label>
-                    <input
-                        type="text"
-                        value={editLocation}
-                        onChange={(e) => setEditLocation(e.target.value)}
-                        className="w-full p-2 border border-gray-300 rounded-md"
-                        placeholder="e.g., Binder, Display Case"
                     />
                   </div>
                 </div>

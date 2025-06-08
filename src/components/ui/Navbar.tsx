@@ -70,7 +70,7 @@ const Navbar: React.FC = () => {
                 to="/profile"
                 className="flex items-center text-gray-700 dark:text-gray-300 hover:text-[#E10600] dark:hover:text-[#E10600]"
               >
-                {user.profileImageUrl ? (
+                {user && user.profileImageUrl ? (
                   <img
                     src={user.profileImageUrl}
                     alt={user.username}
@@ -79,7 +79,7 @@ const Navbar: React.FC = () => {
                 ) : (
                   <User className="h-6 w-6" />
                 )}
-                <span className="ml-2 text-sm font-medium">{user.username}</span>
+                <span className="ml-2 text-sm font-medium">{user?.username ?? ''}</span>
               </Link>
             </div>
           </div>
@@ -163,7 +163,7 @@ const Navbar: React.FC = () => {
           </div>
           <div className="pt-4 pb-3 border-t border-gray-200 dark:border-gray-700">
             <div className="px-4 flex items-center">
-              {user.profileImageUrl ? (
+              {user && user.profileImageUrl ? (
                 <img
                   src={user.profileImageUrl}
                   alt={user.username}
@@ -174,10 +174,10 @@ const Navbar: React.FC = () => {
               )}
               <div className="ml-3">
                 <div className="text-base font-medium text-gray-800 dark:text-white">
-                  {user.username}
+                  {user?.username ?? ''}
                 </div>
                 <div className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                  {user.email}
+                  {user?.email ?? ''}
                 </div>
               </div>
             </div>

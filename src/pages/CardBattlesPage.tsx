@@ -1,34 +1,39 @@
-import React from 'react';
+import React, {useEffect, useState} from 'react';
 import { useApp } from '../context/AppContext';
 import CardBattleDisplay from '../components/ui/CardBattleDisplay';
 import { Trophy, Calendar, Award } from 'lucide-react';
+import {CardBattle} from "../types";
 
 const CardBattlesPage: React.FC = () => {
-  const { cardBattles, cards } = useApp();
+  const { getCardBattles } = useApp();
+  const [cardBattles, setCardBattles] = useState<CardBattle[]>([])
+
+  useEffect(() => {
+    const getAllCardBattles = async () => {
+      const data = await getCardBattles();
+      setCardBattles(data);
+    }
+
+    getAllCardBattles()
+  }, [])
   
   // Get active battle (today's battle)
   const activeBattle = cardBattles.find(battle => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const battleDate = new Date(battle.createdAt);
-    battleDate.setHours(0, 0, 0, 0);
-    return battleDate.getTime() === today.getTime();
+    const now = new Date();
+    const expiresAt = new Date(battle.expiresAt);
+    return now < expiresAt;
   });
   
   // Get past battles
   const pastBattles = cardBattles.filter(battle => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const battleDate = new Date(battle.createdAt);
-    battleDate.setHours(0, 0, 0, 0);
-    return battleDate.getTime() < today.getTime();
-  }).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    const now = new Date();
+    const expiresAt = new Date(battle.expiresAt);
+    return now >= expiresAt;
+  }).sort((a, b) => new Date(b.expiresAt).getTime() - new Date(a.expiresAt).getTime());
   
   // Find winning cards for stats
   const findWinningCard = (battle: typeof cardBattles[0]) => {
-    return battle.votesCardOne > battle.votesCardTwo ? 
-      cards.find(card => card.id === battle.cardOneId)! : 
-      cards.find(card => card.id === battle.cardTwoId)!;
+    return battle.votesCardOne > battle.votesCardTwo ? battle.cardOne : battle.cardTwo;
   };
   
   // Get driver win counts
@@ -103,10 +108,9 @@ const CardBattlesPage: React.FC = () => {
             <Trophy className="h-6 w-6 text-[#FFC800] mr-2" />
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Today's Battle</h2>
           </div>
-          <CardBattleDisplay 
+          <CardBattleDisplay
+            key={activeBattle.battleId}
             battle={activeBattle}
-            cardOne={cards.find(card => card.id === activeBattle.cardOneId)!}
-            cardTwo={cards.find(card => card.id === activeBattle.cardTwoId)!}
             isActive={true}
           />
         </div>
@@ -122,10 +126,8 @@ const CardBattlesPage: React.FC = () => {
         <div className="space-y-6">
           {pastBattles.map(battle => (
             <CardBattleDisplay 
-              key={battle.id}
+              key={battle.battleId}
               battle={battle}
-              cardOne={cards.find(card => card.id === battle.cardOneId)!}
-              cardTwo={cards.find(card => card.id === battle.cardTwoId)!}
               isActive={false}
             />
           ))}

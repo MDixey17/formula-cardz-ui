@@ -1,5 +1,5 @@
 import React from 'react';
-import { MarketPriceSnapshot } from '../../types';
+import { MarketPrice } from '../../types';
 import {
     LineChart,
     Line,
@@ -11,16 +11,12 @@ import {
 } from 'recharts';
 
 interface PriceChartProps {
-  priceData: MarketPriceSnapshot[];
-  cardId: string;
+  priceData: MarketPrice;
 }
 
-const PriceChart: React.FC<PriceChartProps> = ({ priceData, cardId }) => {
-  // Filter price data for the specific card
-  const cardPriceData = priceData.filter((snapshot) => snapshot.cardId === cardId);
-
+const PriceChart: React.FC<PriceChartProps> = ({ priceData }) => {
     // Sort data by timestamp
-    const sortedData = [...cardPriceData]
+    const sortedData = priceData.history
         .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
         .map((entry) => ({
             ...entry,
