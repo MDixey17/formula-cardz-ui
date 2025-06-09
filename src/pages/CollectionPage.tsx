@@ -48,6 +48,7 @@ const CollectionPage: React.FC = () => {
   }, [])
 
   useEffect(() => {
+    if (!selectedSet) return;
     const getPossibleParallels = async () => {
       const possibleParallels = await DropdownService.getParallelDropdown(selectedSet)
       const possibleCards = await getCardsByCriteria(undefined, selectedSet, undefined, undefined, undefined)

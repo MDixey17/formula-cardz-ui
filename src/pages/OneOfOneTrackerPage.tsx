@@ -6,6 +6,7 @@ import {Dropdown} from "../types/Dropdown.ts";
 import {DropdownService} from "../service/dropdownService.ts";
 import {Card} from "../types";
 import {OneOfOneCardResponse} from "../types/response/Cards.ts";
+import {compareCardNumbers} from "../utils";
 
 const OneOfOneTrackerPage: React.FC = () => {
   const { getOneOfOnesBySet } = useApp();
@@ -15,7 +16,7 @@ const OneOfOneTrackerPage: React.FC = () => {
   const [selectedSet, setSelectedSet] = useState<string | null>(null);
   const [filterDriver, setFilterDriver] = useState<string>('');
   const [filterTeam, setFilterTeam] = useState<string>('');
-  const [sortBy, setSortBy] = useState<string>('driver');
+  const [sortBy, setSortBy] = useState<string>('card');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [setsDropdown, setSetsDropdown] = useState<Dropdown[]>([]);
   const [oneOfOneCards, setOneOfOneCards] = useState<OneOfOneCardResponse[]>([]);
@@ -76,7 +77,7 @@ const OneOfOneTrackerPage: React.FC = () => {
         comparison = a.constructorName.localeCompare(b.constructorName);
         break;
       default:
-        comparison = a.driverName.localeCompare(b.driverName);
+        comparison = compareCardNumbers(a.cardNumber, b.cardNumber);
     }
 
     return sortOrder === 'asc' ? comparison : -comparison;

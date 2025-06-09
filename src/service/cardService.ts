@@ -8,7 +8,7 @@ const getCardsByCriteria = async (
     constructorName?: string,
     cardNumber?: string
 ): Promise<CardResponse[]> => {
-    const url = new URL("/cards")
+    const url = new URL("https://formula-cardz-api.onrender.com/v1/cards")
     if (year !== undefined) {
         url.searchParams.set("year", year.toString())
     }
@@ -25,7 +25,7 @@ const getCardsByCriteria = async (
         url.searchParams.set("cardNumber", cardNumber.toString())
     }
 
-    const response = await axiosService.get<CardResponse[]>(url.toString())
+    const response = await axiosService.get<CardResponse[]>(url.toString().substring(41))
     return response.data
 }
 
