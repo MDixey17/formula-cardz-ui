@@ -1,6 +1,6 @@
 import React, {useEffect, useMemo, useState} from 'react';
 import { useApp } from '../context/AppContext';
-import {Grid, List, Filter, SortAsc, SortDesc, FileCog, Plus, Edit2, Trash2, Search, X} from 'lucide-react';
+import {Grid, List, Filter, SortAsc, SortDesc, FileCog, Plus, Edit2, Trash2, X} from 'lucide-react';
 import {ParallelStyles} from "../constants/globalStyles.ts";
 import {Card} from "../types";
 import {Dropdown} from "../types/Dropdown.ts";
@@ -37,6 +37,7 @@ const CollectionPage: React.FC = () => {
   const [parallelDropdown, setParallelDropdown] = useState<Dropdown[]>([])
   const [setsDropdown, setSetsDropdown] = useState<Dropdown[]>([])
   const [cards, setCards] = useState<Card[]>([])
+  const [possibleParallels, setPossibleParallels] = useState<Dropdown[]>([])
 
   useEffect(() => {
     const getDropdowns = async () => {
@@ -53,6 +54,7 @@ const CollectionPage: React.FC = () => {
       const possibleParallels = await DropdownService.getParallelDropdown(selectedSet)
       const possibleCards = await getCardsByCriteria(undefined, selectedSet, undefined, undefined, undefined)
       setParallelDropdown(possibleParallels);
+      setPossibleParallels(possibleParallels)
       setCards(possibleCards);
     }
 
@@ -69,9 +71,8 @@ const CollectionPage: React.FC = () => {
   const filteredCardsForAdd = useMemo(() => {
     if (!selectedSet) return [];
 
-    const [setName, year] = selectedSet.split('|');
     let filteredCards = cards.filter(card =>
-        card.setName === setName && card.year === parseInt(year)
+        card.setName === selectedSet
     );
 
     if (selectedParallel) {
@@ -180,6 +181,7 @@ const CollectionPage: React.FC = () => {
         cardId: newCardId,
         quantity: newQuantity,
         condition: newCondition,
+        purchasePrice: newPurchasePrice === undefined ? undefined : Number(newPurchasePrice)
       });
     }
     setShowAddModal(false);
@@ -200,6 +202,7 @@ const CollectionPage: React.FC = () => {
   const handleCardSelect = (card: typeof cards[0]) => {
     setNewCardId(card.id);
     setCardSearchQuery(`${card.driverName} - ${card.constructorName} #${card.cardNumber}`);
+    setPossibleParallels(possibleParallels.filter((pp) => card.parallels.some((ep) => ep.name === pp.value)))
     setShowCardDropdown(false);
   };
 
@@ -586,7 +589,7 @@ const CollectionPage: React.FC = () => {
                             className="w-full p-2 border border-gray-300 rounded-md"
                         >
                           <option value="">All Parallels</option>
-                          {parallelDropdown.map(parallel => (
+                          {possibleParallels.map(parallel => (
                               <option key={parallel.value} value={parallel.value}>{parallel.label}</option>
                           ))}
                         </select>
@@ -617,6 +620,7 @@ const CollectionPage: React.FC = () => {
                                   onClick={() => {
                                     setCardSearchQuery('');
                                     setNewCardId('');
+                                    setPossibleParallels(parallelDropdown)
                                     setShowCardDropdown(false);
                                   }}
                                   className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
@@ -624,9 +628,6 @@ const CollectionPage: React.FC = () => {
                                 <X className="h-4 w-4" />
                               </button>
                           )}
-                          <div className="absolute left-2 top-1/2 transform -translate-y-1/2">
-                            <Search className="h-4 w-4 text-gray-400" />
-                          </div>
                         </div>
 
                         {/* Autocomplete Dropdown */}
