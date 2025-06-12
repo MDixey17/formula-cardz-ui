@@ -5,6 +5,7 @@ import {ParallelStyles} from "../constants/globalStyles.ts";
 import {Card} from "../types";
 import {Dropdown} from "../types/Dropdown.ts";
 import {DropdownService} from "../service/dropdownService.ts";
+import LoadingSpinner from "../components/ui/LoadingSpinner.tsx";
 
 const CollectionPage: React.FC = () => {
   const { user, cardOwnerships, addCardToCollection, removeCardFromCollection, updateCardOwnership, getCardsByCriteria } = useApp();
@@ -22,6 +23,7 @@ const CollectionPage: React.FC = () => {
   const [editQuantity, setEditQuantity] = useState(1);
   const [editCondition, setEditCondition] = useState('Raw');
   const [editPurchasePrice, setEditPurchasePrice] = useState<string>('');
+  const [isLoading, setLoading] = useState(true)
 
   // Add card modal states
   const [selectedSet, setSelectedSet] = useState<string>('2020 Topps Chrome Formula 1')
@@ -41,8 +43,10 @@ const CollectionPage: React.FC = () => {
 
   useEffect(() => {
     const getDropdowns = async () => {
+      setLoading(true)
       const sets = await DropdownService.getSetsDropdown();
       setSetsDropdown(sets);
+      setLoading(false)
     }
 
     getDropdowns()
@@ -367,182 +371,187 @@ const CollectionPage: React.FC = () => {
         )}
 
         {/* Collection */}
-        {sortedCards.length === 0 ? (
-            <div className="bg-white rounded-lg shadow p-8 text-center">
-              <FileCog className="mx-auto h-12 w-12 text-gray-400" />
-              <h3 className="mt-2 text-lg font-medium text-gray-900">No cards found</h3>
-              <p className="mt-1 text-sm text-gray-500">
-                {cardOwnerships.length === 0
-                    ? "You don't have any cards in your collection yet."
-                    : "No cards match your current filters."}
-              </p>
-              {cardOwnerships.length === 0 && (
-                  <div className="mt-6">
-                    <button
-                        onClick={() => setShowAddModal(true)}
-                        className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-[#E10600] hover:bg-red-700"
-                    >
-                      <Plus className="h-5 w-5 mr-2" />
-                      Add Your First Card
-                    </button>
-                  </div>
-              )}
-            </div>
-        ) : (
+        {isLoading && <LoadingSpinner />}
+        {!isLoading && (
             <>
-              {viewMode === 'grid' ? (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-                    {sortedCards.map((card) => (
-                        <div key={`${card.id}-${card.condition}`} className="bg-white rounded-lg shadow p-4">
-                          <div className="relative">
-                            <div className="h-25 w-25 rounded-md overflow-hidden">
-                              <img src={card.imageUrl} alt={card.driverName}
-                                   className="h-full w-full object-cover"/>
-                            </div>
-                            <div className="absolute top-2 right-2 flex space-x-1">
-                              <button
-                                  onClick={() => handleEditCard(card)}
-                                  className="p-1 bg-white rounded-full shadow hover:bg-gray-100"
-                                  title="Edit Card"
-                              >
-                                <Edit2 className="h-4 w-4 text-gray-600"/>
-                              </button>
-                              <button
-                                  onClick={() => handleDeleteCard(card.id)}
-                                  className="p-1 bg-white rounded-full shadow hover:bg-gray-100"
-                                  title="Remove Card"
-                              >
-                                <Trash2 className="h-4 w-4 text-[#E10600]"/>
-                              </button>
-                            </div>
-                          </div>
-                          <div className="mt-2 pt-2 border-t border-gray-100">
-                            <div className="flex justify-between text-sm">
-                              <span className="text-gray-500">Quantity:</span>
-                              <span className="font-medium">{card.quantity}</span>
-                            </div>
-                            <div className="flex justify-between text-sm mt-1">
-                              <span className="text-gray-500">Condition:</span>
-                              <span className="font-medium">{card.condition}</span>
-                            </div>
-                            {card.purchasePrice && (
-                                <div className="flex justify-between text-sm mt-1">
-                                  <span className="text-gray-500">Purchase:</span>
-                                  <span className="font-medium">${card.purchasePrice.toFixed(2)}</span>
-                                </div>
-                            )}
-                            <div className="flex justify-start mt-2">
-                              {card.printRun && (
-                                  <div className="bg-black/70 text-xs font-bold px-2 py-1 rounded-full text-white mr-2">
-                                    /{card.printRun}
-                                  </div>
-                              )}
-                              {card.parallel && (
-                                  <div
-                                      className={`text-xs font-bold px-2 py-1 rounded-full mr-2 ${
-                                          ParallelStyles.get(card.parallel) ?? 'bg-gray-100 text-gray-800'
-                                      }`}
-                                  >
-                                    {card.parallel}
-                                  </div>
-                              )}
-                              {card.rookieCard && (
-                                  <div className="bg-yellow-500 text-xs font-bold px-2 py-1 rounded-full text-white">
-                                    RC
-                                  </div>
-                              )}
-                            </div>
-                          </div>
+              {sortedCards.length === 0 ? (
+                  <div className="bg-white rounded-lg shadow p-8 text-center">
+                    <FileCog className="mx-auto h-12 w-12 text-gray-400" />
+                    <h3 className="mt-2 text-lg font-medium text-gray-900">No cards found</h3>
+                    <p className="mt-1 text-sm text-gray-500">
+                      {cardOwnerships.length === 0
+                          ? "You don't have any cards in your collection yet."
+                          : "No cards match your current filters."}
+                    </p>
+                    {cardOwnerships.length === 0 && (
+                        <div className="mt-6">
+                          <button
+                              onClick={() => setShowAddModal(true)}
+                              className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-[#E10600] hover:bg-red-700"
+                          >
+                            <Plus className="h-5 w-5 mr-2" />
+                            Add Your First Card
+                          </button>
                         </div>
-                    ))}
+                    )}
                   </div>
               ) : (
-                  <div className="bg-white rounded-lg shadow overflow-hidden">
-                    <table className="min-w-full divide-y divide-gray-200">
-                      <thead className="bg-gray-50">
-                      <tr>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Card
-                        </th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Driver / Team
-                        </th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Set / Year
-                        </th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Parallel
-                        </th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Condition
-                        </th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Quantity
-                        </th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Purchase
-                        </th>
-                        <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Actions
-                        </th>
-                      </tr>
-                      </thead>
-                      <tbody className="bg-white divide-y divide-gray-200">
-                      {sortedCards.map((card) => (
-                          <tr key={`${card.id}-${card.condition}`} className="hover:bg-gray-50">
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="h-10 w-10 rounded-md overflow-hidden">
-                                <img src={card.imageUrl} alt={card.driverName} className="h-full w-full object-cover" />
+                  <>
+                    {viewMode === 'grid' ? (
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                          {sortedCards.map((card) => (
+                              <div key={`${card.id}-${card.condition}`} className="bg-white rounded-lg shadow p-4">
+                                <div className="relative">
+                                  <div className="h-25 w-25 rounded-md overflow-hidden">
+                                    <img src={card.imageUrl} alt={card.driverName}
+                                         className="h-full w-full object-cover"/>
+                                  </div>
+                                  <div className="absolute top-2 right-2 flex space-x-1">
+                                    <button
+                                        onClick={() => handleEditCard(card)}
+                                        className="p-1 bg-white rounded-full shadow hover:bg-gray-100"
+                                        title="Edit Card"
+                                    >
+                                      <Edit2 className="h-4 w-4 text-gray-600"/>
+                                    </button>
+                                    <button
+                                        onClick={() => handleDeleteCard(card.id)}
+                                        className="p-1 bg-white rounded-full shadow hover:bg-gray-100"
+                                        title="Remove Card"
+                                    >
+                                      <Trash2 className="h-4 w-4 text-[#E10600]"/>
+                                    </button>
+                                  </div>
+                                </div>
+                                <div className="mt-2 pt-2 border-t border-gray-100">
+                                  <div className="flex justify-between text-sm">
+                                    <span className="text-gray-500">Quantity:</span>
+                                    <span className="font-medium">{card.quantity}</span>
+                                  </div>
+                                  <div className="flex justify-between text-sm mt-1">
+                                    <span className="text-gray-500">Condition:</span>
+                                    <span className="font-medium">{card.condition}</span>
+                                  </div>
+                                  {card.purchasePrice && (
+                                      <div className="flex justify-between text-sm mt-1">
+                                        <span className="text-gray-500">Purchase:</span>
+                                        <span className="font-medium">${card.purchasePrice.toFixed(2)}</span>
+                                      </div>
+                                  )}
+                                  <div className="flex justify-start mt-2">
+                                    {card.printRun && (
+                                        <div className="bg-black/70 text-xs font-bold px-2 py-1 rounded-full text-white mr-2">
+                                          /{card.printRun}
+                                        </div>
+                                    )}
+                                    {card.parallel && (
+                                        <div
+                                            className={`text-xs font-bold px-2 py-1 rounded-full mr-2 ${
+                                                ParallelStyles.get(card.parallel) ?? 'bg-gray-100 text-gray-800'
+                                            }`}
+                                        >
+                                          {card.parallel}
+                                        </div>
+                                    )}
+                                    {card.rookieCard && (
+                                        <div className="bg-yellow-500 text-xs font-bold px-2 py-1 rounded-full text-white">
+                                          RC
+                                        </div>
+                                    )}
+                                  </div>
+                                </div>
                               </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm font-medium text-gray-900">#{card.cardNumber} {card.driverName}</div>
-                              <div className="text-sm text-gray-500">{card.constructorName}</div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm text-gray-900">{card.setName}</div>
-                              <div className="text-sm text-gray-500">{card.year}</div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
+                          ))}
+                        </div>
+                    ) : (
+                        <div className="bg-white rounded-lg shadow overflow-hidden">
+                          <table className="min-w-full divide-y divide-gray-200">
+                            <thead className="bg-gray-50">
+                            <tr>
+                              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Card
+                              </th>
+                              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Driver / Team
+                              </th>
+                              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Set / Year
+                              </th>
+                              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Parallel
+                              </th>
+                              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Condition
+                              </th>
+                              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Quantity
+                              </th>
+                              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Purchase
+                              </th>
+                              <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Actions
+                              </th>
+                            </tr>
+                            </thead>
+                            <tbody className="bg-white divide-y divide-gray-200">
+                            {sortedCards.map((card) => (
+                                <tr key={`${card.id}-${card.condition}`} className="hover:bg-gray-50">
+                                  <td className="px-6 py-4 whitespace-nowrap">
+                                    <div className="h-10 w-10 rounded-md overflow-hidden">
+                                      <img src={card.imageUrl} alt={card.driverName} className="h-full w-full object-cover" />
+                                    </div>
+                                  </td>
+                                  <td className="px-6 py-4 whitespace-nowrap">
+                                    <div className="text-sm font-medium text-gray-900">#{card.cardNumber} {card.driverName}</div>
+                                    <div className="text-sm text-gray-500">{card.constructorName}</div>
+                                  </td>
+                                  <td className="px-6 py-4 whitespace-nowrap">
+                                    <div className="text-sm text-gray-900">{card.setName}</div>
+                                    <div className="text-sm text-gray-500">{card.year}</div>
+                                  </td>
+                                  <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          ParallelStyles.get(card.parallel ?? 'Base') ?? 'bg-gray-100 text-gray-800'
+                            ParallelStyles.get(card.parallel ?? 'Base') ?? 'bg-gray-100 text-gray-800'
                         }`}>
                           {card.parallel ?? 'Base'}
                         </span>
-                              {card.printRun && (
-                                  <span className="text-xs text-gray-500 ml-1">/{card.printRun}</span>
-                              )}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              {card.condition}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              {card.quantity}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              {card.purchasePrice
-                                  ? `$${card.purchasePrice.toFixed(2)}`
-                                  : '-'}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                              <button
-                                  onClick={() => handleEditCard(card)}
-                                  className="text-[#0600E1] hover:text-blue-800 mr-3"
-                              >
-                                Edit
-                              </button>
-                              <button
-                                  onClick={() => handleDeleteCard(card.id)}
-                                  className="text-[#E10600] hover:text-red-800"
-                              >
-                                Delete
-                              </button>
-                            </td>
-                          </tr>
-                      ))}
-                      </tbody>
-                    </table>
-                  </div>
+                                    {card.printRun && (
+                                        <span className="text-xs text-gray-500 ml-1">/{card.printRun}</span>
+                                    )}
+                                  </td>
+                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    {card.condition}
+                                  </td>
+                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    {card.quantity}
+                                  </td>
+                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    {card.purchasePrice
+                                        ? `$${card.purchasePrice.toFixed(2)}`
+                                        : '-'}
+                                  </td>
+                                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                    <button
+                                        onClick={() => handleEditCard(card)}
+                                        className="text-[#0600E1] hover:text-blue-800 mr-3"
+                                    >
+                                      Edit
+                                    </button>
+                                    <button
+                                        onClick={() => handleDeleteCard(card.id)}
+                                        className="text-[#E10600] hover:text-red-800"
+                                    >
+                                      Delete
+                                    </button>
+                                  </td>
+                                </tr>
+                            ))}
+                            </tbody>
+                          </table>
+                        </div>
+                    )}
+                  </>
               )}
             </>
         )}

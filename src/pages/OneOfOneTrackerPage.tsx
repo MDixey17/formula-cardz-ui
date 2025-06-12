@@ -5,8 +5,11 @@ import { Search, Filter, Grid, List, SortAsc, SortDesc } from 'lucide-react';
 import {Dropdown} from "../types/Dropdown.ts";
 import {DropdownService} from "../service/dropdownService.ts";
 import {Card} from "../types";
-import {OneOfOneCardResponse} from "../types/response/Cards.ts";
+import {EnabledParallel, OneOfOneCardResponse} from "../types/response/Cards.ts";
 import {compareCardNumbers} from "../utils";
+import LoadingSpinner from "../components/ui/LoadingSpinner.tsx";
+
+type StatusFilter = 'all' | 'missing' | 'found'
 
 const OneOfOneTrackerPage: React.FC = () => {
   const { getOneOfOnesBySet } = useApp();
@@ -16,15 +19,20 @@ const OneOfOneTrackerPage: React.FC = () => {
   const [selectedSet, setSelectedSet] = useState<string | null>(null);
   const [filterDriver, setFilterDriver] = useState<string>('');
   const [filterTeam, setFilterTeam] = useState<string>('');
+  const [filterPrintingPlates, setFilterPrintingPlates] = useState<boolean>(true)
+  const [filterStatus, setFilterStatus] = useState<StatusFilter>('all')
   const [sortBy, setSortBy] = useState<string>('card');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [setsDropdown, setSetsDropdown] = useState<Dropdown[]>([]);
   const [oneOfOneCards, setOneOfOneCards] = useState<OneOfOneCardResponse[]>([]);
+  const [isLoading, setLoading] = useState(false);
 
   useEffect(() => {
     const getDropdowns = async () => {
+      setLoading(true);
       const sets = await DropdownService.getSetsDropdown()
       setSetsDropdown(sets)
+      setLoading(false)
     }
 
     getDropdowns();
@@ -37,8 +45,10 @@ const OneOfOneTrackerPage: React.FC = () => {
     }
 
     const getOneOfOnes = async () => {
+      setLoading(true)
       const data = await getOneOfOnesBySet(selectedSet);
       setOneOfOneCards(data)
+      setLoading(false)
     }
 
     getOneOfOnes();
@@ -84,10 +94,15 @@ const OneOfOneTrackerPage: React.FC = () => {
   });
 
   // Stats for the selected set
-  const totalOneOfOnes = oneOfOneCards.length;
-  const foundCount = oneOfOneCards.filter(card =>
-      card.parallels.some((p) => p.isOneOfOneFound === true)
-  ).length;
+  const allParallels = oneOfOneCards.flatMap(card => card.parallels);
+
+  // Count total one-of-one parallels
+  const totalOneOfOnes = allParallels.filter(p => p.isOneOfOne === true).length;
+
+  // Count found one-of-one parallels
+  const foundCount = allParallels.filter(p => p.isOneOfOne === true && p.isOneOfOneFound === true).length;
+
+  // Calculate missing
   const missingCount = totalOneOfOnes - foundCount;
 
   const buildCardFromOneOfOne = (oneOfOne: OneOfOneCardResponse, imageUrl: string): Card => ({
@@ -95,6 +110,15 @@ const OneOfOneTrackerPage: React.FC = () => {
     baseImageUrl: imageUrl,
     hasOneOfOne: true
   })
+
+  const showParallel = (parallel: EnabledParallel): boolean => {
+    if (filterStatus === 'found') {
+      return parallel.isOneOfOneFound === true
+    } else if (filterStatus === 'missing') {
+      return parallel.isOneOfOneFound === false
+    }
+    return true
+  }
 
   return (
       <div className="py-6 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
@@ -145,6 +169,8 @@ const OneOfOneTrackerPage: React.FC = () => {
                   setFilterDriver('');
                   setFilterTeam('');
                   setSearchQuery('');
+                  setFilterPrintingPlates(true)
+                  setFilterStatus('all')
                 } else {
                   setSelectedSet(null);
                 }
@@ -242,34 +268,63 @@ const OneOfOneTrackerPage: React.FC = () => {
                           </button>
                         </div>
                       </div>
+                      {/* Status Filter */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Status</label>
+                        <select
+                            value={filterStatus}
+                            onChange={(e) => setFilterStatus(e.target.value as StatusFilter)}
+                            className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                        >
+                          <option value="all">All Cards</option>
+                          <option value="found">Only Found</option>
+                          <option value="missing">Only Missing</option>
+                        </select>
+                      </div>
+
+                      {/* Include Printing Plates */}
+                      <div className="flex items-end">
+                        <label className="inline-flex items-center space-x-2 text-sm text-gray-700 dark:text-gray-300">
+                          <input
+                              type="checkbox"
+                              checked={filterPrintingPlates}
+                              onChange={() => setFilterPrintingPlates(prev => !prev)}
+                              className="form-checkbox h-4 w-4 text-blue-600 transition duration-150 ease-in-out dark:bg-gray-700 dark:border-gray-600"
+                          />
+                          <span>Exclude Printing Plates</span>
+                        </label>
+                      </div>
                     </div>
                 )}
               </div>
 
               {/* Cards Display */}
-              {sortedCards.length === 0 ? (
-                  <div className="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-md text-center">
-                    <p className="text-gray-500 dark:text-gray-400">
-                      No 1/1 cards found matching your criteria.
-                    </p>
-                  </div>
-              ) : viewMode === 'grid' ? (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-                    {sortedCards.map((card) =>
-                      card.parallels.map((parallel) => (
-                          <div key={`${parallel.name}-${card.id}`} className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-                            <CardDisplayItem card={buildCardFromOneOfOne(card, parallel.imageUrl ?? '')} showActions={false}/>
-                            <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700">
-                              <div className="text-sm font-medium text-gray-900 dark:text-white">
-                                #{card.cardNumber} {card.driverName}
-                              </div>
-                              <div className="text-sm text-gray-500 dark:text-gray-400">
-                                {card.setName}
-                              </div>
-                              <div className="text-sm font-medium text-gray-900 dark:text-white">
-                                {parallel.name}
-                              </div>
-                              <div className="mt-1">
+              {isLoading && <LoadingSpinner />}
+              {!isLoading && (
+                  <>
+                    {sortedCards.length === 0 ? (
+                        <div className="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-md text-center">
+                          <p className="text-gray-500 dark:text-gray-400">
+                            No 1/1 cards found matching your criteria.
+                          </p>
+                        </div>
+                    ) : viewMode === 'grid' ? (
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                          {sortedCards.map((card) =>
+                                  card.parallels.filter((p) => showParallel(p)).filter((p) => filterPrintingPlates ? !p.name.includes('Printing Plate') : true).map((parallel) => (
+                                      <div key={`${parallel.name}-${card.id}`} className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+                                        <CardDisplayItem card={buildCardFromOneOfOne(card, parallel.imageUrl ?? '')} showActions={false}/>
+                                        <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700">
+                                          <div className="text-sm font-medium text-gray-900 dark:text-white">
+                                            #{card.cardNumber} {card.driverName}
+                                          </div>
+                                          <div className="text-sm text-gray-500 dark:text-gray-400">
+                                            {card.setName}
+                                          </div>
+                                          <div className="text-sm font-medium text-gray-900 dark:text-white">
+                                            {parallel.name}
+                                          </div>
+                                          <div className="mt-1">
                       <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
                           parallel.isOneOfOne === true && parallel.isOneOfOneFound === true
                               ? 'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100'
@@ -277,52 +332,52 @@ const OneOfOneTrackerPage: React.FC = () => {
                       }`}>
                         {parallel.isOneOfOne === true && parallel.isOneOfOneFound === true ? 'Found' : 'Missing'}
                       </span>
-                              </div>
-                            </div>
-                          </div>
-                      ))
-                    )}
-                  </div>
-              ) : (
-                  <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
-                    <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                      <thead className="bg-gray-50 dark:bg-gray-900">
-                      <tr>
-                        <th scope="col"
-                            className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                          Card
-                        </th>
-                        <th scope="col"
-                            className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                          Driver / Team
-                        </th>
-                        <th scope="col"
-                            className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                          Parallel
-                        </th>
-                        <th scope="col"
-                            className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                          Status
-                        </th>
-                      </tr>
-                      </thead>
-                      <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                      {sortedCards.map((card) =>
-                        card.parallels.map((parallel) => (
-                            <tr key={`${parallel.name}-${card.id}`} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <div className="h-10 w-10 rounded-md overflow-hidden">
-                                  <img src={parallel.imageUrl} alt={card.driverName} className="h-full w-full object-cover" />
-                                </div>
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <div className="text-sm font-medium text-gray-900 dark:text-white">{card.driverName}</div>
-                                <div className="text-sm text-gray-500 dark:text-gray-400">{card.constructorName}</div>
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <span className="text-sm text-gray-900 dark:text-white">{parallel.name}</span>
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap">
+                                          </div>
+                                        </div>
+                                      </div>
+                                  ))
+                          )}
+                        </div>
+                    ) : (
+                        <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+                          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                            <thead className="bg-gray-50 dark:bg-gray-900">
+                            <tr>
+                              <th scope="col"
+                                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                Card
+                              </th>
+                              <th scope="col"
+                                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                Driver / Team
+                              </th>
+                              <th scope="col"
+                                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                Parallel
+                              </th>
+                              <th scope="col"
+                                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                Status
+                              </th>
+                            </tr>
+                            </thead>
+                            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                            {sortedCards.map((card) =>
+                                card.parallels.map((parallel) => (
+                                    <tr key={`${parallel.name}-${card.id}`} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                                      <td className="px-6 py-4 whitespace-nowrap">
+                                        <div className="h-10 w-10 rounded-md overflow-hidden">
+                                          <img src={parallel.imageUrl} alt={card.driverName} className="h-full w-full object-cover" />
+                                        </div>
+                                      </td>
+                                      <td className="px-6 py-4 whitespace-nowrap">
+                                        <div className="text-sm font-medium text-gray-900 dark:text-white">{card.driverName}</div>
+                                        <div className="text-sm text-gray-500 dark:text-gray-400">{card.constructorName}</div>
+                                      </td>
+                                      <td className="px-6 py-4 whitespace-nowrap">
+                                        <span className="text-sm text-gray-900 dark:text-white">{parallel.name}</span>
+                                      </td>
+                                      <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                             parallel.isOneOfOne === true && parallel.isOneOfOneFound === true
                                 ? 'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100'
@@ -330,12 +385,14 @@ const OneOfOneTrackerPage: React.FC = () => {
                         }`}>
                           {parallel.isOneOfOne === true && parallel.isOneOfOneFound === true ? 'Found' : 'Missing'}
                         </span>
-                              </td>
-                            </tr>
-                        )))}
-                      </tbody>
-                    </table>
-                  </div>
+                                      </td>
+                                    </tr>
+                                )))}
+                            </tbody>
+                          </table>
+                        </div>
+                    )}
+                  </>
               )}
             </>
         ) : (

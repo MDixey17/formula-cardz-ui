@@ -6,6 +6,7 @@ import { Grid, List, Search, Filter } from 'lucide-react';
 import {ParallelStyles} from "../constants/globalStyles.ts";
 import {MarketPriceSnapshot} from "../types/response/MarketPrice.ts";
 import {Card, CardOwnership} from "../types";
+import LoadingSpinner from "../components/ui/LoadingSpinner.tsx";
 
 const MarketplacePage: React.FC = () => {
   const { cardOwnerships, getMarketPriceByCardId, grailEntries } = useApp();
@@ -20,6 +21,7 @@ const MarketplacePage: React.FC = () => {
   const [sortBy, setSortBy] = useState<string>('recent');
   const [selectedCard, setSelectedCard] = useState<string | null>(null);
   const [cardMarketPrice, setCardMarketPrice] = useState<MarketPriceSnapshot[]>([])
+  const [isLoading, setLoading] = useState(false);
 
   useEffect(() => {
     if (!selectedCard) {
@@ -28,8 +30,10 @@ const MarketplacePage: React.FC = () => {
     }
     
     const fetchCardData = async () => {
+      setLoading(true);
       const cardData = await getMarketPriceByCardId(selectedCard)
       setCardMarketPrice(cardData.history)
+      setLoading(false)
     }
     
     fetchCardData()
@@ -287,104 +291,109 @@ const MarketplacePage: React.FC = () => {
         </div>
       )}
 
-      {/* Cards Grid/List */}
-      {viewMode === 'grid' ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-          {sortedCards.map((card) => (
-            <div 
-              key={card.id} 
-              className="bg-white rounded-lg shadow p-4 cursor-pointer hover:shadow-md transition"
-              onClick={() => setSelectedCard(card.id)}
-            >
-              <CardDisplayItem 
-                card={buildCardFromOwnership(card)}
-                showActions={false}
-                isInGrailList={grailEntries.some(entry => entry.id === card.id)}
-                marketPrice={cardMarketPrice.length === 0 ? 0.00 : cardMarketPrice[0].averagePrice}
-              />
-              <div className="mt-2 text-center">
-                <button className="text-sm text-[#0600E1] hover:text-blue-700">
-                  View Details
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Card
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Driver / Team
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Set / Year
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Parallel
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Avg. Price
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {sortedCards.map((card) => {
-                const latestPrice = cardMarketPrice
-                  .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())[0];
-                
-                return (
-                  <tr 
-                    key={card.id} 
-                    className="hover:bg-gray-50 cursor-pointer"
-                    onClick={() => setSelectedCard(card.id)}
-                  >
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="h-10 w-10 rounded-md overflow-hidden">
-                        <img src={card.imageUrl} alt={card.driverName} className="h-full w-full object-cover" />
+      {isLoading && <LoadingSpinner />}
+      {!isLoading && (
+          <>
+            {/* Cards Grid/List */}
+            {viewMode === 'grid' ? (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                  {sortedCards.map((card) => (
+                      <div
+                          key={card.id}
+                          className="bg-white rounded-lg shadow p-4 cursor-pointer hover:shadow-md transition"
+                          onClick={() => setSelectedCard(card.id)}
+                      >
+                        <CardDisplayItem
+                            card={buildCardFromOwnership(card)}
+                            showActions={false}
+                            isInGrailList={grailEntries.some(entry => entry.id === card.id)}
+                            marketPrice={cardMarketPrice.length === 0 ? 0.00 : cardMarketPrice[0].averagePrice}
+                        />
+                        <div className="mt-2 text-center">
+                          <button className="text-sm text-[#0600E1] hover:text-blue-700">
+                            View Details
+                          </button>
+                        </div>
                       </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">#{card.cardNumber} {card.driverName}</div>
-                      <div className="text-sm text-gray-500">{card.constructorName}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{card.setName}</div>
-                      <div className="text-sm text-gray-500">{card.year}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                  ))}
+                </div>
+            ) : (
+                <div className="bg-white rounded-lg shadow overflow-hidden">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                    <tr>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Card
+                      </th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Driver / Team
+                      </th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Set / Year
+                      </th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Parallel
+                      </th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Avg. Price
+                      </th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Actions
+                      </th>
+                    </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                    {sortedCards.map((card) => {
+                      const latestPrice = cardMarketPrice
+                          .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())[0];
+
+                      return (
+                          <tr
+                              key={card.id}
+                              className="hover:bg-gray-50 cursor-pointer"
+                              onClick={() => setSelectedCard(card.id)}
+                          >
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="h-10 w-10 rounded-md overflow-hidden">
+                                <img src={card.imageUrl} alt={card.driverName} className="h-full w-full object-cover" />
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm font-medium text-gray-900">#{card.cardNumber} {card.driverName}</div>
+                              <div className="text-sm text-gray-500">{card.constructorName}</div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm text-gray-900">{card.setName}</div>
+                              <div className="text-sm text-gray-500">{card.year}</div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
                           ParallelStyles.get(card.parallel ?? 'Base') ?? 'bg-gray-100 text-gray-800'
                       }`}>
                         {card.parallel}
                       </span>
-                      {card.printRun && (
-                        <span className="text-xs text-gray-500 ml-1">/{card.printRun}</span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-[#E10600]">
-                        {latestPrice ? `$${latestPrice.averagePrice.toFixed(2)}` : 'N/A'}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <button className="text-[#0600E1] hover:text-blue-800">
-                        View Details
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                              {card.printRun && (
+                                  <span className="text-xs text-gray-500 ml-1">/{card.printRun}</span>
+                              )}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm font-medium text-[#E10600]">
+                                {latestPrice ? `$${latestPrice.averagePrice.toFixed(2)}` : 'N/A'}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm">
+                              <button className="text-[#0600E1] hover:text-blue-800">
+                                View Details
+                              </button>
+                            </td>
+                          </tr>
+                      );
+                    })}
+                    </tbody>
+                  </table>
+                </div>
+            )}
+          </>
       )}
     </div>
   );

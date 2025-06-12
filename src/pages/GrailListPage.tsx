@@ -5,15 +5,18 @@ import PriceChart from '../components/ui/PriceChart';
 import { Bell, Search, BellOff } from 'lucide-react';
 import {Card, GrailListEntry, MarketPrice} from "../types";
 import {RemoveGrailRequest} from "../types/request/Grail.ts";
+import LoadingSpinner from "../components/ui/LoadingSpinner.tsx";
 
 const GrailListPage: React.FC = () => {
   const { user, grailEntries, removeCardFromGrailList, getMarketPriceByCardId } = useApp();
   const [selectedCard, setSelectedCard] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [marketPrices, setMarketPrices] = useState<MarketPrice[]>([]);
+  const [isLoading, setLoading] = useState(false);
 
   useEffect(() => {
     const getAllMarketPrices = async () => {
+      setLoading(true)
       const data: MarketPrice[] = []
       for (let i = 0; i < grailEntries.length; i++) {
         const grail = grailEntries[i];
@@ -21,6 +24,7 @@ const GrailListPage: React.FC = () => {
         data.push(response)
       }
       setMarketPrices(data)
+      setLoading(false)
     }
 
     getAllMarketPrices()
@@ -132,64 +136,69 @@ const GrailListPage: React.FC = () => {
       )}
       
       {/* Grail List */}
-      {filteredGrailList.length === 0 ? (
-        <div className="bg-white p-8 rounded-lg shadow-md text-center">
-          <Bell className="mx-auto h-12 w-12 text-gray-400" />
-          <h3 className="mt-2 text-lg font-medium text-gray-900">Your grail list is empty</h3>
-          <p className="mt-1 text-sm text-gray-500">
-            Add cards to your grail list to track and get notified when they're available.
-          </p>
-        </div>
-      ) : (
-        <div className="bg-white rounded-lg shadow-md overflow-hidden">
-          <ul className="divide-y divide-gray-200">
-            {filteredGrailList.map(entry => (
-              <li key={entry.id} className="p-4 hover:bg-gray-50">
-                <div className="flex items-center space-x-4">
-                  <div className="h-16 w-16 flex-shrink-0 rounded-md overflow-hidden">
-                    <img 
-                      src={entry.imageUrl}
-                      alt={entry.driverName}
-                      className="h-full w-full object-cover"
-                    />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900 truncate">
-                      {entry.driverName}
-                    </p>
-                    <p className="text-sm text-gray-500 truncate">
-                      {entry.setName}{entry.parallel ? ` - ${entry.parallel}` : ''}
-                    </p>
-                  </div>
-                  <div className="ml-4 flex-shrink-0 flex">
-                    <button
-                      onClick={() => toggleNotification(entry.id)}
-                      className="mr-2 p-1 rounded-full hover:bg-gray-100"
-                    >
-                      {entry.notifyOnAvailable ? (
-                        <Bell className="h-5 w-5 text-[#E10600]" />
-                      ) : (
-                        <BellOff className="h-5 w-5 text-gray-400" />
-                      )}
-                    </button>
-                    <button
-                      onClick={() => setSelectedCard(entry.id)}
-                      className="mr-2 text-[#0600E1] hover:text-blue-800"
-                    >
-                      View Details
-                    </button>
-                    <button
-                      onClick={() => removeCardFromGrailList(buildRemoveGrailRequest())}
-                      className="text-gray-400 hover:text-[#E10600]"
-                    >
-                      Remove
-                    </button>
-                  </div>
+      {isLoading && <LoadingSpinner />}
+      {!isLoading && (
+          <>
+            {filteredGrailList.length === 0 ? (
+                <div className="bg-white p-8 rounded-lg shadow-md text-center">
+                  <Bell className="mx-auto h-12 w-12 text-gray-400" />
+                  <h3 className="mt-2 text-lg font-medium text-gray-900">Your grail list is empty</h3>
+                  <p className="mt-1 text-sm text-gray-500">
+                    Add cards to your grail list to track and get notified when they're available.
+                  </p>
                 </div>
-              </li>
-            ))}
-          </ul>
-        </div>
+            ) : (
+                <div className="bg-white rounded-lg shadow-md overflow-hidden">
+                  <ul className="divide-y divide-gray-200">
+                    {filteredGrailList.map(entry => (
+                        <li key={entry.id} className="p-4 hover:bg-gray-50">
+                          <div className="flex items-center space-x-4">
+                            <div className="h-16 w-16 flex-shrink-0 rounded-md overflow-hidden">
+                              <img
+                                  src={entry.imageUrl}
+                                  alt={entry.driverName}
+                                  className="h-full w-full object-cover"
+                              />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-gray-900 truncate">
+                                {entry.driverName}
+                              </p>
+                              <p className="text-sm text-gray-500 truncate">
+                                {entry.setName}{entry.parallel ? ` - ${entry.parallel}` : ''}
+                              </p>
+                            </div>
+                            <div className="ml-4 flex-shrink-0 flex">
+                              <button
+                                  onClick={() => toggleNotification(entry.id)}
+                                  className="mr-2 p-1 rounded-full hover:bg-gray-100"
+                              >
+                                {entry.notifyOnAvailable ? (
+                                    <Bell className="h-5 w-5 text-[#E10600]" />
+                                ) : (
+                                    <BellOff className="h-5 w-5 text-gray-400" />
+                                )}
+                              </button>
+                              <button
+                                  onClick={() => setSelectedCard(entry.id)}
+                                  className="mr-2 text-[#0600E1] hover:text-blue-800"
+                              >
+                                View Details
+                              </button>
+                              <button
+                                  onClick={() => removeCardFromGrailList(buildRemoveGrailRequest())}
+                                  className="text-gray-400 hover:text-[#E10600]"
+                              >
+                                Remove
+                              </button>
+                            </div>
+                          </div>
+                        </li>
+                    ))}
+                  </ul>
+                </div>
+            )}
+          </>
       )}
     </div>
   );
