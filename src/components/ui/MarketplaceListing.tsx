@@ -14,9 +14,10 @@ interface MarketplaceListingProps {
     listingDate: Date;
   };
   card: Card;
+  parallel?: string
 }
 
-const MarketplaceListing: React.FC<MarketplaceListingProps> = ({ listing, card }) => {
+const MarketplaceListing: React.FC<MarketplaceListingProps> = ({ listing, card, parallel }) => {
 
   const daysAgo = (date: Date) => {
     const today = new Date();
@@ -26,12 +27,14 @@ const MarketplaceListing: React.FC<MarketplaceListingProps> = ({ listing, card }
     return diffDays;
   };
 
+  const cardParallel = card.parallels.find((p) => p.name === parallel)
+
   return (
     <div className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow p-4 border border-gray-200">
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="w-full sm:w-24 h-24 rounded-md overflow-hidden">
           <img 
-            src={card.cardImageUrl} 
+            src={cardParallel === undefined ? card.baseImageUrl : cardParallel.imageUrl}
             alt={card.driverName} 
             className="w-full h-full object-cover"
           />
@@ -41,15 +44,15 @@ const MarketplaceListing: React.FC<MarketplaceListingProps> = ({ listing, card }
           <div className="flex flex-col sm:flex-row justify-between gap-2">
             <div>
               <h3 className="font-bold text-gray-800">{card.driverName}</h3>
-              <p className="text-sm text-gray-600">{card.setName} - {card.parallel}</p>
+              <p className="text-sm text-gray-600">{card.setName}{cardParallel !== undefined ? `- ${cardParallel.name}` : ''}</p>
               
               <div className="flex items-center mt-1 text-xs text-gray-500">
                 <span className="mr-2">Card #{card.cardNumber}</span>
                 {card.rookieCard && (
                   <span className="bg-yellow-100 text-yellow-800 px-1 py-0.5 rounded">RC</span>
                 )}
-                {card.printRun && (
-                  <span className="ml-2">/{card.printRun}</span>
+                {cardParallel && cardParallel.printRun && (
+                  <span className="ml-2">/{cardParallel.printRun}</span>
                 )}
               </div>
             </div>

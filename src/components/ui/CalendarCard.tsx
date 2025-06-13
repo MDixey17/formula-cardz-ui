@@ -3,7 +3,7 @@ import { ExternalLink } from 'lucide-react';
 
 interface CalendarCardProps {
   product: {
-    id: string;
+    id?: string;
     productName: string;
     releaseDate: Date;
     description: string;

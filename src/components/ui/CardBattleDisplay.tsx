@@ -1,19 +1,15 @@
 import React from 'react';
-import { Card, CardBattle } from '../../types';
+import { CardBattle } from '../../types';
 import { Trophy } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 
 interface CardBattleDisplayProps {
   battle: CardBattle;
-  cardOne: Card;
-  cardTwo: Card;
   isActive?: boolean;
 }
 
 const CardBattleDisplay: React.FC<CardBattleDisplayProps> = ({
   battle,
-  cardOne,
-  cardTwo,
   isActive = false,
 }) => {
   const { voteForCard } = useApp();
@@ -22,9 +18,9 @@ const CardBattleDisplay: React.FC<CardBattleDisplayProps> = ({
   const cardOnePercentage = totalVotes > 0 ? Math.round((battle.votesCardOne / totalVotes) * 100) : 50;
   const cardTwoPercentage = totalVotes > 0 ? Math.round((battle.votesCardTwo / totalVotes) * 100) : 50;
   
-  const handleVote = (cardIndex: 1 | 2) => {
+  const handleVote = async (cardIndex: 1 | 2) => {
     if (!isActive) return;
-    voteForCard(battle.id, cardIndex);
+    await voteForCard(battle.battleId, cardIndex);
   };
 
   const formatDate = (date: Date) => {
@@ -34,6 +30,9 @@ const CardBattleDisplay: React.FC<CardBattleDisplayProps> = ({
       year: 'numeric',
     });
   };
+
+  const cardOne = battle.cardOne
+  const cardTwo = battle.cardTwo
 
   return (
     <div className="bg-white p-4 rounded-lg shadow-md">
@@ -48,7 +47,7 @@ const CardBattleDisplay: React.FC<CardBattleDisplayProps> = ({
               Active
             </span>
           ) : (
-            <span>{formatDate(battle.createdAt)}</span>
+            <span>Ended {formatDate(battle.expiresAt)}</span>
           )}
         </div>
       </div>
@@ -60,14 +59,14 @@ const CardBattleDisplay: React.FC<CardBattleDisplayProps> = ({
         >
           <div className={`relative rounded-lg overflow-hidden ${battle.votesCardOne > battle.votesCardTwo ? 'ring-2 ring-[#FFC800] bg-amber-300' : ''}`}>
             <img 
-              src={cardOne.cardImageUrl} 
+              src={cardOne.imageUrl}
               alt={cardOne.driverName} 
               className="w-full h-60 object-contain"
             />
             <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black to-transparent">
               <div className="text-white">
                 <p className="font-bold">{cardOne.driverName}</p>
-                <p className="text-sm">{cardOne.setName} {cardOne.parallel}</p>
+                <p className="text-sm">{cardOne.setName}</p>
               </div>
             </div>
             {battle.votesCardOne > battle.votesCardTwo && !isActive && (
@@ -105,14 +104,14 @@ const CardBattleDisplay: React.FC<CardBattleDisplayProps> = ({
         >
           <div className={`relative rounded-lg overflow-hidden ${battle.votesCardTwo > battle.votesCardOne ? 'ring-2 ring-[#FFC800] bg-amber-300' : ''}`}>
             <img 
-              src={cardTwo.cardImageUrl} 
+              src={cardTwo.imageUrl}
               alt={cardTwo.driverName} 
               className="w-full h-60 object-contain"
             />
             <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black to-transparent">
               <div className="text-white">
                 <p className="font-bold">{cardTwo.driverName}</p>
-                <p className="text-sm">{cardTwo.setName} {cardTwo.parallel}</p>
+                <p className="text-sm">{cardTwo.setName}</p>
               </div>
             </div>
             {battle.votesCardTwo > battle.votesCardOne && !isActive && (

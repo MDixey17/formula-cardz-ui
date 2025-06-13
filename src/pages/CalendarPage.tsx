@@ -1,12 +1,27 @@
-import React, { useState } from 'react';
+import React, {useEffect, useState} from 'react';
 import { useApp } from '../context/AppContext';
 import CalendarCard from '../components/ui/CalendarCard';
 import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
+import {CardDrop} from "../types";
+import LoadingSpinner from "../components/ui/LoadingSpinner.tsx";
 
 const CalendarPage: React.FC = () => {
-  const { cardDrops } = useApp();
+  const { getCardDrops } = useApp();
   const [currentMonth, setCurrentMonth] = useState<number>(new Date().getMonth());
   const [currentYear, setCurrentYear] = useState<number>(new Date().getFullYear());
+  const [cardDrops, setCardDrops] = useState<CardDrop[]>([])
+  const [isLoading, setLoading] = useState<boolean>(false)
+
+  useEffect(() => {
+    const getAllCardDrops = async () => {
+      setLoading(true)
+      const data = await getCardDrops();
+      setCardDrops(data);
+      setLoading(false)
+    }
+
+    getAllCardDrops();
+  }, [getCardDrops])
 
   // Month navigation
   const nextMonth = () => {
@@ -113,100 +128,105 @@ const CalendarPage: React.FC = () => {
         <h1 className="text-3xl font-bold text-gray-900">Drops Calendar</h1>
         <p className="text-gray-600">Stay updated on upcoming card releases and hobby events</p>
       </div>
-      
-      {/* Monthly Calendar */}
-      <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-        <div className="flex justify-between items-center mb-6">
-          <button 
-            onClick={prevMonth}
-            className="p-2 rounded-full hover:bg-gray-100"
-          >
-            <ChevronLeft className="h-5 w-5" />
-          </button>
-          <h2 className="text-xl font-bold">
-            {getMonthName(currentMonth)} {currentYear}
-          </h2>
-          <button 
-            onClick={nextMonth}
-            className="p-2 rounded-full hover:bg-gray-100"
-          >
-            <ChevronRight className="h-5 w-5" />
-          </button>
-        </div>
-        
-        <div className="grid grid-cols-7 gap-1 text-center">
-          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-            <div key={day} className="font-medium text-gray-500 p-2">
-              {day}
-            </div>
-          ))}
-          
-          {calendarDays.map((day, index) => {
-            const isToday = day && new Date().getDate() === day && 
-                           new Date().getMonth() === currentMonth && 
-                           new Date().getFullYear() === currentYear;
-            
-            const hasDrops = hasEvent(day);
-            
-            return (
-              <div 
-                key={index} 
-                className={`p-2 h-20 rounded-md relative ${
-                  !day ? 'bg-gray-50' : 
-                  isToday ? 'bg-blue-50 border border-blue-200' : 
-                  'hover:bg-gray-50'
-                }`}
-              >
-                {day && (
-                  <>
+
+      {isLoading && <LoadingSpinner />}
+      {!isLoading && (
+          <>
+            {/* Monthly Calendar */}
+            <div className="bg-white rounded-lg shadow-md p-6 mb-8">
+              <div className="flex justify-between items-center mb-6">
+                <button
+                    onClick={prevMonth}
+                    className="p-2 rounded-full hover:bg-gray-100"
+                >
+                  <ChevronLeft className="h-5 w-5" />
+                </button>
+                <h2 className="text-xl font-bold">
+                  {getMonthName(currentMonth)} {currentYear}
+                </h2>
+                <button
+                    onClick={nextMonth}
+                    className="p-2 rounded-full hover:bg-gray-100"
+                >
+                  <ChevronRight className="h-5 w-5" />
+                </button>
+              </div>
+
+              <div className="grid grid-cols-7 gap-1 text-center">
+                {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+                    <div key={day} className="font-medium text-gray-500 p-2">
+                      {day}
+                    </div>
+                ))}
+
+                {calendarDays.map((day, index) => {
+                  const isToday = day && new Date().getDate() === day &&
+                      new Date().getMonth() === currentMonth &&
+                      new Date().getFullYear() === currentYear;
+
+                  const hasDrops = hasEvent(day);
+
+                  return (
+                      <div
+                          key={index}
+                          className={`p-2 h-20 rounded-md relative ${
+                              !day ? 'bg-gray-50' :
+                                  isToday ? 'bg-blue-50 border border-blue-200' :
+                                      'hover:bg-gray-50'
+                          }`}
+                      >
+                        {day && (
+                            <>
                     <span className={`inline-block rounded-full w-6 h-6 flex items-center justify-center ${
-                      isToday ? 'bg-[#0600E1] text-white' : ''
+                        isToday ? 'bg-[#0600E1] text-white' : ''
                     }`}>
                       {day}
                     </span>
-                    
-                    {hasDrops && (
-                      <div className="absolute bottom-1 right-1 left-1">
-                        <div className="bg-[#E10600] text-white text-xs p-1 rounded text-center">
-                          {getEventsForDay(day).length} {getEventsForDay(day).length === 1 ? 'release' : 'releases'}
-                        </div>
+
+                              {hasDrops && (
+                                  <div className="absolute bottom-1 right-1 left-1">
+                                    <div className="bg-[#E10600] text-white text-xs p-1 rounded text-center">
+                                      {getEventsForDay(day).length} {getEventsForDay(day).length === 1 ? 'release' : 'releases'}
+                                    </div>
+                                  </div>
+                              )}
+                            </>
+                        )}
                       </div>
-                    )}
-                  </>
-                )}
+                  );
+                })}
               </div>
-            );
-          })}
-        </div>
-      </div>
-      
-      {/* Month Releases */}
-      {filteredDrops.length > 0 && (
-        <div className="mb-8">
-          <h2 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white">
-            Releases in {getMonthName(currentMonth)}
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredDrops.map(product => (
-              <CalendarCard key={product.id} product={product} />
-            ))}
-          </div>
-        </div>
+            </div>
+
+            {/* Month Releases */}
+            {filteredDrops.length > 0 && (
+                <div className="mb-8">
+                  <h2 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white">
+                    Releases in {getMonthName(currentMonth)}
+                  </h2>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {filteredDrops.map(product => (
+                        <CalendarCard key={product.productName} product={product} />
+                    ))}
+                  </div>
+                </div>
+            )}
+
+            {/* Upcoming Releases */}
+            <div>
+              <div className="flex items-center mb-4">
+                <Calendar className="h-6 w-6 text-[#E10600] mr-2" />
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Upcoming Releases</h2>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {upcomingDrops.map(product => (
+                    <CalendarCard key={product.productName} product={product} />
+                ))}
+              </div>
+            </div>
+          </>
       )}
-      
-      {/* Upcoming Releases */}
-      <div>
-        <div className="flex items-center mb-4">
-          <Calendar className="h-6 w-6 text-[#E10600] mr-2" />
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Upcoming Releases</h2>
-        </div>
-        
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {upcomingDrops.map(product => (
-            <CalendarCard key={product.id} product={product} />
-          ))}
-        </div>
-      </div>
     </div>
   );
 };

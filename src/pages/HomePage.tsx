@@ -1,30 +1,41 @@
-import React from 'react';
+import React, {useEffect, useState} from 'react';
 import { useApp } from '../context/AppContext';
-import CardDisplayItem from '../components/ui/CardDisplayItem';
-import PriceChart from '../components/ui/PriceChart';
 import CardBattleDisplay from '../components/ui/CardBattleDisplay';
 import { Link } from 'react-router-dom';
+import {CardBattle, CardDrop} from "../types";
+import {CardBattleService} from "../service/cardBattleService.ts";
+import LoadingSpinner from "../components/ui/LoadingSpinner.tsx";
 
 const HomePage: React.FC = () => {
   const { 
-    cards, 
-    marketPriceSnapshots, 
-    cardBattles,
-    cardDrops,
-    grailEntries
+    getCardsByCriteria,
+    getCardBattles,
+    getCardDrops,
   } = useApp();
 
-  // Get active battle (today's battle)
-  const activeBattle = cardBattles.find(battle => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const battleDate = new Date(battle.createdAt);
-    battleDate.setHours(0, 0, 0, 0);
-    return battleDate.getTime() === today.getTime();
-  });
+  const [cardBattles, setCardBattles] = useState<CardBattle[]>([])
+  const [cardDrops, setCardDrops] = useState<CardDrop[]>([])
+  const [isLoading, setLoading] = useState(false)
 
-  // Get today's highlighted card
-  const highlightedCard = cards[Math.floor(Math.random() * cards.length)];
+  useEffect(() => {
+    const getAllData = async () => {
+      setLoading(true)
+      const dropsResponse = await getCardDrops()
+      const activeCardBattles = await CardBattleService.getActiveCardBattle()
+
+      setCardBattles(activeCardBattles.map((battle) => ({
+        ...battle,
+        battleId: battle.id
+      })))
+      setCardDrops(dropsResponse)
+      setLoading(false)
+    }
+
+    getAllData()
+  }, [getCardsByCriteria, getCardBattles, getCardDrops])
+
+  // Get active battle (today's battle)
+  const activeBattle = cardBattles[cardBattles.length === 0 ? 0 : Math.floor(Math.random() * cardBattles.length)];
   
   // Get next upcoming card drop
   const nextDrop = [...cardDrops].sort((a, b) => 
@@ -62,126 +73,95 @@ const HomePage: React.FC = () => {
       </div>
 
       {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Left Column */}
-        <div className="lg:col-span-2 space-y-8">
-          {/* Featured Cards */}
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <h2 className="text-2xl font-bold mb-4">Featured Cards</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-              {cards.slice(0, 6).map((card) => (
-                <CardDisplayItem 
-                  key={card.id} 
-                  card={card}
-                  isInGrailList={grailEntries.some(entry => entry.cardId === card.id)}
-                  marketPrice={
-                    marketPriceSnapshots
-                      .filter(snapshot => snapshot.cardId === card.id)
-                      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())[0]?.averagePrice
-                  }
-                />
-              ))}
-            </div>
-            <div className="mt-6 text-center">
-              <Link
-                to="/marketplace"
-                className="inline-block bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium px-6 py-2 rounded-md transition"
-              >
-                View All Cards
-              </Link>
-            </div>
-          </div>
-
-          {/* Today's Card Battle */}
-          {activeBattle && (
-            <div className="bg-white p-6 rounded-lg shadow-md">
-              <h2 className="text-2xl font-bold mb-4">Today's Card Battle</h2>
-              <CardBattleDisplay 
-                battle={activeBattle}
-                cardOne={cards.find(card => card.id === activeBattle.cardOneId)!}
-                cardTwo={cards.find(card => card.id === activeBattle.cardTwoId)!}
-                isActive={true}
-              />
-              <div className="mt-6 text-center">
-                <Link
-                  to="/card-battles"
-                  className="inline-block bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium px-6 py-2 rounded-md transition"
-                >
-                  View Past Battles
-                </Link>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Right Column */}
-        <div className="space-y-8">
-          {/* Card of the Day */}
-          {highlightedCard && (
-            <div className="bg-white p-6 rounded-lg shadow-md">
-              <h2 className="text-2xl font-bold mb-4">Card of the Day</h2>
-              <div className="mx-auto max-w-[240px]">
-                <CardDisplayItem 
-                  card={highlightedCard}
-                  isInGrailList={grailEntries.some(entry => entry.cardId === highlightedCard.id)}
-                  marketPrice={
-                    marketPriceSnapshots
-                      .filter(snapshot => snapshot.cardId === highlightedCard.id)
-                      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())[0]?.averagePrice
-                  }
-                />
-              </div>
-              <div className="mt-6">
-                <PriceChart priceData={marketPriceSnapshots} cardId={highlightedCard.id} />
-              </div>
-            </div>
-          )}
-
-          {/* Next Drop */}
-          {nextDrop && (
-            <div className="bg-white p-6 rounded-lg shadow-md">
-              <h2 className="text-2xl font-bold mb-4">Coming Soon</h2>
-              <div className="relative rounded-lg overflow-hidden">
-                <img 
-                  src={nextDrop.imageUrl} 
-                  alt={nextDrop.productName}
-                  className="w-full h-48 object-cover"
-                />
-                <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black to-transparent">
-                  <h3 className="text-white font-bold">{nextDrop.productName}</h3>
-                  <p className="text-white text-sm">
-                    {new Date(nextDrop.releaseDate).toLocaleDateString('en-US', {
-                      month: 'long',
-                      day: 'numeric',
-                      year: 'numeric'
-                    })}
-                  </p>
+      {isLoading && <LoadingSpinner />}
+      {!isLoading && (
+          <>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              {/* Left Column */}
+              <div className="lg:col-span-2 space-y-8">
+                {/* Featured Cards */}
+                <div className="bg-white p-6 rounded-lg shadow-md">
+                  <h2 className="text-2xl font-bold mb-4">Featured Cards</h2>
+                  <div className="mt-6 text-center">
+                    <Link
+                        to="/marketplace"
+                        className="inline-block bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium px-6 py-2 rounded-md transition"
+                    >
+                      View All Cards
+                    </Link>
+                  </div>
                 </div>
+
+                {/* Today's Card Battle */}
+                {activeBattle && (
+                    <div className="bg-white p-6 rounded-lg shadow-md">
+                      <h2 className="text-2xl font-bold mb-4">Today's Card Battle</h2>
+                      <CardBattleDisplay
+                          battle={activeBattle}
+                          isActive={true}
+                      />
+                      <div className="mt-6 text-center">
+                        <Link
+                            to="/card-battles"
+                            className="inline-block bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium px-6 py-2 rounded-md transition"
+                        >
+                          View Past Battles
+                        </Link>
+                      </div>
+                    </div>
+                )}
               </div>
-              <p className="mt-4 text-sm text-gray-600">{nextDrop.description}</p>
-              <div className="mt-4">
-                {nextDrop.preorderUrl ? (
-                  <a
-                    href={nextDrop.preorderUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="block w-full bg-[#E10600] text-white text-center font-medium px-4 py-2 rounded-md hover:bg-red-700 transition"
-                  >
-                    Preorder Now
-                  </a>
-                ) : (
-                  <Link
-                    to="/calendar"
-                    className="block w-full bg-gray-100 text-gray-800 text-center font-medium px-4 py-2 rounded-md hover:bg-gray-200 transition"
-                  >
-                    View Release Calendar
-                  </Link>
+
+              {/* Right Column */}
+              <div className="space-y-8">
+                {/* Next Drop */}
+                {nextDrop && (
+                    <div className="bg-white p-6 rounded-lg shadow-md">
+                      <h2 className="text-2xl font-bold mb-4">Coming Soon</h2>
+                      <div className="relative rounded-lg overflow-hidden">
+                        <img
+                            src={nextDrop.imageUrl}
+                            alt={nextDrop.productName}
+                            className="w-full h-48 object-cover"
+                        />
+                        <div
+                            className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black to-transparent">
+                          <h3 className="text-white font-bold">{nextDrop.productName}</h3>
+                          <p className="text-white text-sm">
+                            {new Date(nextDrop.releaseDate).toLocaleDateString('en-US', {
+                              month: 'long',
+                              day: 'numeric',
+                              year: 'numeric'
+                            })}
+                          </p>
+                        </div>
+                      </div>
+                      <p className="mt-4 text-sm text-gray-600">{nextDrop.description}</p>
+                      <div className="mt-4">
+                        {nextDrop.preorderUrl ? (
+                            <a
+                                href={nextDrop.preorderUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="block w-full bg-[#E10600] text-white text-center font-medium px-4 py-2 rounded-md hover:bg-red-700 transition"
+                            >
+                              Preorder Now
+                            </a>
+                        ) : (
+                            <Link
+                                to="/calendar"
+                                className="block w-full bg-gray-100 text-gray-800 text-center font-medium px-4 py-2 rounded-md hover:bg-gray-200 transition"
+                            >
+                              View Release Calendar
+                            </Link>
+                        )}
+                      </div>
+                    </div>
                 )}
               </div>
             </div>
-          )}
-        </div>
-      </div>
+          </>
+      )}
     </div>
   );
 };

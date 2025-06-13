@@ -10,6 +10,7 @@ interface CardDisplayItemProps {
   marketPrice?: number;
   isInGrailList?: boolean;
   enable3d?: boolean
+  parallel?: string
 }
 
 const CardDisplayItem: React.FC<CardDisplayItemProps> = ({
@@ -17,26 +18,48 @@ const CardDisplayItem: React.FC<CardDisplayItemProps> = ({
   showActions = true,
   marketPrice,
   isInGrailList = false,
-  enable3d = false
+  enable3d = false,
+  parallel
 }) => {
-  const { addCardToCollection, addCardToGrailList, removeCardFromGrailList } = useApp();
+  const { user, addCardToCollection, addCardToGrailList, removeCardFromGrailList } = useApp();
   const [isFlipped, setIsFlipped] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [quantity, setQuantity] = useState(1);
   const [condition, setCondition] = useState('Raw');
 
-  const handleAddToCollection = () => {
-    addCardToCollection(card, quantity, condition);
+  const handleAddToCollection = async () => {
+    if (user) {
+      await addCardToCollection({
+        userId: user.id,
+        cardId: card.id,
+        quantity: quantity,
+        parallel: parallel,
+        condition: condition,
+      });
+    }
     setShowAddModal(false);
   };
 
-  const handleGrailListToggle = () => {
-    if (isInGrailList) {
-      removeCardFromGrailList(card.id);
-    } else {
-      addCardToGrailList(card.id);
+  const handleGrailListToggle = async () => {
+    if (user) {
+      if (isInGrailList) {
+        await removeCardFromGrailList({
+          userId: user.id,
+          cardId: card.id,
+          parallel: parallel,
+        });
+      } else {
+        await addCardToGrailList({
+          userId: user.id,
+          cardId: card.id,
+          parallel: parallel,
+          notifyOnAvailable: true
+        });
+      }
     }
   };
+
+  const cardParallel = card.parallels.find((p) => p.name === parallel)
 
   return (
     <div className="relative group">
@@ -62,7 +85,7 @@ const CardDisplayItem: React.FC<CardDisplayItemProps> = ({
           >
             <div className="relative h-0 pb-[140%] bg-gradient-to-b from-gray-100 to-gray-200 rounded-lg overflow-hidden shadow-lg">
               <img
-                src={card.cardImageUrl}
+                src={cardParallel === undefined ? card.baseImageUrl : cardParallel.imageUrl}
                 alt={`${card.driverName} card`}
                 className="absolute inset-0 w-full h-full object-cover"
               />
@@ -71,18 +94,18 @@ const CardDisplayItem: React.FC<CardDisplayItemProps> = ({
                   RC
                 </div>
               )}
-              {card.printRun && (
+              {cardParallel && cardParallel.printRun && (
                 <div className="absolute top-2 right-2 bg-black/70 text-xs font-bold px-2 py-1 rounded-full text-white">
-                  /{card.printRun}
+                  /{cardParallel.printRun}
                 </div>
               )}
-              {card.parallel !== 'Base' && (
+              {cardParallel && cardParallel.name !== 'Base' && (
                 <div
                   className={`absolute bottom-2 right-2 text-xs font-bold px-2 py-1 rounded-full ${
-                    ParallelStyles.get(card.parallel) ?? 'bg-gray-100 text-gray-800'
+                    ParallelStyles.get(cardParallel.name) ?? 'bg-gray-100 text-gray-800'
                   }`}
                 >
-                  {card.parallel}
+                  {cardParallel.name}
                 </div>
               )}
             </div>
@@ -108,14 +131,16 @@ const CardDisplayItem: React.FC<CardDisplayItemProps> = ({
                 <p className="text-xs text-gray-500">Card #</p>
                 <p className="text-sm font-medium">{card.cardNumber}</p>
               </div>
-              <div className="bg-gray-100 p-2 rounded-md mb-2">
-                <p className="text-xs text-gray-500">Parallel</p>
-                <p className="text-sm font-medium">{card.parallel}</p>
-              </div>
-              {card.printRun && (
-                <div className="bg-gray-100 p-2 rounded-md">
-                  <p className="text-xs text-gray-500">Print Run</p>
-                  <p className="text-sm font-medium">/{card.printRun}</p>
+              {cardParallel && (
+                  <div className="bg-gray-100 p-2 rounded-md mb-2">
+                    <p className="text-xs text-gray-500">Parallel</p>
+                    <p className="text-sm font-medium">{cardParallel.name}</p>
+                  </div>
+              )}
+              {cardParallel && cardParallel.printRun && (
+                  <div className="bg-gray-100 p-2 rounded-md">
+                    <p className="text-xs text-gray-500">Print Run</p>
+                    <p className="text-sm font-medium">/{cardParallel.printRun}</p>
                 </div>
               )}
               {marketPrice && (

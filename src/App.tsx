@@ -10,6 +10,9 @@ import CardBattlesPage from './pages/CardBattlesPage';
 import CalendarPage from './pages/CalendarPage';
 import GrailListPage from './pages/GrailListPage';
 import OneOfOneTrackerPage from './pages/OneOfOneTrackerPage';
+import LoginPage from "./pages/LoginPage.tsx";
+import RegisterPage from "./pages/RegisterPage.tsx";
+import PrivateRoute from "./components/PrivateRoute.tsx";
 
 function App() {
   return (
@@ -21,11 +24,29 @@ function App() {
             <main className="pb-12">
               <Routes>
                 <Route path="/" element={<HomePage />} />
-                <Route path="/collection" element={<CollectionPage />} />
-                <Route path="/marketplace" element={<MarketplacePage />} />
-                <Route path="/card-battles" element={<CardBattlesPage />} />
+                <Route path="/login" element={<LoginPage />} />
+                <Route path="/register" element={<RegisterPage />} />
+                <Route path="/collection" element={(
+                    <PrivateRoute>
+                      <CollectionPage />
+                    </PrivateRoute>
+                )} />
+                <Route path="/marketplace" element={(
+                    <PrivateRoute>
+                      <MarketplacePage />
+                    </PrivateRoute>
+                )} />
+                <Route path="/card-battles" element={(
+                    <PrivateRoute>
+                      <CardBattlesPage />
+                    </PrivateRoute>
+                )} />
                 <Route path="/calendar" element={<CalendarPage />} />
-                <Route path="/grail-list" element={<GrailListPage />} />
+                <Route path="/grail-list" element={(
+                    <PrivateRoute>
+                      <GrailListPage />
+                    </PrivateRoute>
+                )} />
                 <Route path="/one-of-one" element={<OneOfOneTrackerPage />} />
               </Routes>
             </main>
