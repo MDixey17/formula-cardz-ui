@@ -4,7 +4,7 @@ export interface MarketPriceSnapshot {
     averagePrice: number
     highestPrice: number
     source: string
-    parallel: string
+    parallel?: string
 }
 
 export interface MarketPriceResponse {

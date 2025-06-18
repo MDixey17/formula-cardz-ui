@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Card } from '../../types';
 import { Heart, DollarSign, PlusCircle, Info } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
-import { ParallelStyles } from '../../constants/globalStyles';
+import {AttributeStyles, ParallelStyles} from '../../constants/globalStyles';
 
 interface CardDisplayItemProps {
   card: Card;
@@ -90,12 +90,12 @@ const CardDisplayItem: React.FC<CardDisplayItemProps> = ({
                 className="absolute inset-0 w-full h-full object-cover"
               />
               {card.rookieCard && (
-                <div className="absolute top-2 left-2 bg-yellow-500 text-xs font-bold px-2 py-1 rounded-full text-white">
+                <div className={`absolute top-2 left-2 text-xs font-bold px-2 py-1 rounded-full ${AttributeStyles.get('rookie')}`}>
                   RC
                 </div>
               )}
               {cardParallel && cardParallel.printRun && (
-                <div className="absolute top-2 right-2 bg-black/70 text-xs font-bold px-2 py-1 rounded-full text-white">
+                <div className={`absolute top-2 right-2 text-xs font-bold px-2 py-1 rounded-full ${AttributeStyles.get('printRun')}`}>
                   /{cardParallel.printRun}
                 </div>
               )}

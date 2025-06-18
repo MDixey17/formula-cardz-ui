@@ -1,6 +1,7 @@
 import React from 'react';
 import { Card } from '../../types';
 import { ExternalLink, Star } from 'lucide-react';
+import {AttributeStyles} from "../../constants/globalStyles.ts";
 
 interface MarketplaceListingProps {
   listing: {
@@ -49,7 +50,7 @@ const MarketplaceListing: React.FC<MarketplaceListingProps> = ({ listing, card, 
               <div className="flex items-center mt-1 text-xs text-gray-500">
                 <span className="mr-2">Card #{card.cardNumber}</span>
                 {card.rookieCard && (
-                  <span className="bg-yellow-100 text-yellow-800 px-1 py-0.5 rounded">RC</span>
+                  <span className={`${AttributeStyles.get('rookie')} px-1 py-0.5 rounded`}>RC</span>
                 )}
                 {cardParallel && cardParallel.printRun && (
                   <span className="ml-2">/{cardParallel.printRun}</span>
