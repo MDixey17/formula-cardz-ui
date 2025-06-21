@@ -22,12 +22,15 @@ export const ParallelStyles = new Map([
     ['Purple Checker Flag Refractor', 'bg-purple-200 text-purple-900'],
     ['Green Refractor', 'bg-green-100 text-green-800'],
     ['Gold Refractor', 'bg-yellow-100 text-yellow-800'],
+    ['70th Anniversary Gold Refractor', 'bg-yellow-100 text-yellow-800'],
     ['Gold Checker Flag Refractor', 'bg-yellow-200 text-yellow-900'],
     ['Gold Wave Refractor', 'bg-yellow-100 text-yellow-800 italic'],
     ['Orange Refractor', 'bg-orange-100 text-orange-800'],
+    ['70th Anniversary Orange Refractor', 'bg-yellow-100 text-yellow-800'],
     ['Orange Checker Flag Refractor', 'bg-orange-200 text-orange-900'],
     ['Orange Wave Refractor', 'bg-orange-100 text-orange-800 italic'],
     ['Red Refractor', 'bg-red-100 text-red-800'],
+    ['70th Anniversary Red Refractor', 'bg-yellow-100 text-yellow-800'],
     ['Red Checker Flag Refractor', 'bg-red-200 text-red-900'],
     ['Red Wave Refractor', 'bg-red-100 text-red-800 italic'],
     ['Green RayWave Refractor', 'bg-green-100 text-green-800 italic'],
@@ -160,6 +163,7 @@ export const ParallelStyles = new Map([
 
     // Rare 1/1s
     ['Superfractor', 'bg-gradient-to-br from-yellow-300 via-black to-yellow-300 text-white'],
+    ['70th Anniversary Superfractor', 'bg-gradient-to-br from-yellow-300 via-black to-yellow-300 text-white'],
     ['Padparadscha', 'bg-pink-200 text-pink-900'],
     ['Rose Gold Logofractor', 'bg-rose-100 text-rose-800'],
 ])

@@ -59,7 +59,7 @@ const CardBattleDisplay: React.FC<CardBattleDisplayProps> = ({
         >
           <div className={`relative rounded-lg overflow-hidden ${battle.votesCardOne > battle.votesCardTwo ? 'ring-2 ring-[#FFC800] bg-amber-300' : ''}`}>
             <img 
-              src={cardOne.imageUrl}
+              src={cardOne.imageUrl + "?v=2"}
               alt={cardOne.driverName} 
               className="w-full h-60 object-contain"
             />
@@ -104,7 +104,7 @@ const CardBattleDisplay: React.FC<CardBattleDisplayProps> = ({
         >
           <div className={`relative rounded-lg overflow-hidden ${battle.votesCardTwo > battle.votesCardOne ? 'ring-2 ring-[#FFC800] bg-amber-300' : ''}`}>
             <img 
-              src={cardTwo.imageUrl}
+              src={cardTwo.imageUrl + "?v=2"}
               alt={cardTwo.driverName} 
               className="w-full h-60 object-contain"
             />

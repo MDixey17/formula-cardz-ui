@@ -35,7 +35,7 @@ const MarketplaceListing: React.FC<MarketplaceListingProps> = ({ listing, card, 
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="w-full sm:w-24 h-24 rounded-md overflow-hidden">
           <img 
-            src={cardParallel === undefined ? card.baseImageUrl : cardParallel.imageUrl}
+            src={cardParallel === undefined ? card.baseImageUrl + "?v=2" : cardParallel.imageUrl + "?v=2"}
             alt={card.driverName} 
             className="w-full h-full object-cover"
           />

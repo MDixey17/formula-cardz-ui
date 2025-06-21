@@ -619,7 +619,7 @@ const MarketplacePage: React.FC = () => {
                           >
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div className="h-10 w-10 rounded-md overflow-hidden">
-                                <img src={card.imageUrl} alt={card.driverName} className="h-full w-full object-cover" />
+                                <img src={card.imageUrl + "?v=2"} alt={card.driverName} className="h-full w-full object-cover" />
                               </div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">

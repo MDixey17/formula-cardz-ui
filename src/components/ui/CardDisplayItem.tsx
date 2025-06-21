@@ -85,7 +85,7 @@ const CardDisplayItem: React.FC<CardDisplayItemProps> = ({
           >
             <div className="relative h-0 pb-[140%] bg-gradient-to-b from-gray-100 to-gray-200 rounded-lg overflow-hidden shadow-lg">
               <img
-                src={cardParallel === undefined ? card.baseImageUrl : cardParallel.imageUrl}
+                src={cardParallel === undefined ? card.baseImageUrl + "?v=2" : cardParallel.imageUrl + "?v=2"}
                 alt={`${card.driverName} card`}
                 className="absolute inset-0 w-full h-full object-cover"
               />
