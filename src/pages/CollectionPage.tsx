@@ -1,7 +1,7 @@
 import React, {useEffect, useMemo, useState} from 'react';
 import { useApp } from '../context/AppContext';
 import {Grid, List, Filter, SortAsc, SortDesc, FileCog, Plus, Edit2, Trash2, X} from 'lucide-react';
-import {ParallelStyles} from "../constants/globalStyles.ts";
+import {AttributeStyles, ParallelStyles} from "../constants/globalStyles.ts";
 import {Card} from "../types";
 import {Dropdown} from "../types/Dropdown.ts";
 import {DropdownService} from "../service/dropdownService.ts";
@@ -403,7 +403,7 @@ const CollectionPage: React.FC = () => {
                               <div key={`${card.id}-${card.condition}`} className="bg-white rounded-lg shadow p-4">
                                 <div className="relative">
                                   <div className="h-25 w-25 rounded-md overflow-hidden">
-                                    <img src={card.imageUrl} alt={card.driverName}
+                                    <img src={card.imageUrl + "?v=2"} alt={card.driverName}
                                          className="h-full w-full object-cover"/>
                                   </div>
                                   <div className="absolute top-2 right-2 flex space-x-1">
@@ -440,7 +440,7 @@ const CollectionPage: React.FC = () => {
                                   )}
                                   <div className="flex justify-start mt-2">
                                     {card.printRun && (
-                                        <div className="bg-black/70 text-xs font-bold px-2 py-1 rounded-full text-white mr-2">
+                                        <div className={`text-xs font-bold px-2 py-1 rounded-full ${AttributeStyles.get('printRun')}`}>
                                           /{card.printRun}
                                         </div>
                                     )}
@@ -454,7 +454,7 @@ const CollectionPage: React.FC = () => {
                                         </div>
                                     )}
                                     {card.rookieCard && (
-                                        <div className="bg-yellow-500 text-xs font-bold px-2 py-1 rounded-full text-white">
+                                        <div className={`text-xs font-bold px-2 py-1 rounded-full ${AttributeStyles.get('rookie')}`}>
                                           RC
                                         </div>
                                     )}
@@ -499,7 +499,7 @@ const CollectionPage: React.FC = () => {
                                 <tr key={`${card.id}-${card.condition}`} className="hover:bg-gray-50">
                                   <td className="px-6 py-4 whitespace-nowrap">
                                     <div className="h-10 w-10 rounded-md overflow-hidden">
-                                      <img src={card.imageUrl} alt={card.driverName} className="h-full w-full object-cover" />
+                                      <img src={card.imageUrl + "?v=2"} alt={card.driverName} className="h-full w-full object-cover" />
                                     </div>
                                   </td>
                                   <td className="px-6 py-4 whitespace-nowrap">

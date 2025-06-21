@@ -62,24 +62,29 @@ function App() {
                       <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">Features</h4>
                       <ul className="space-y-1 text-sm text-gray-600 dark:text-gray-400">
                         <li>Collection Management</li>
+                        <li>Grail List</li>
                         <li>Market Pricing</li>
                         <li>Card Battles</li>
                         <li>Drops Calendar</li>
+                        <li>One Of One Tracker</li>
                       </ul>
                     </div>
                     <div>
-                      <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">Company</h4>
+                      <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">Project</h4>
                       <ul className="space-y-1 text-sm text-gray-600 dark:text-gray-400">
-                        <li>About Us</li>
-                        <li>Contact</li>
-                        <li>Privacy Policy</li>
-                        <li>Terms of Service</li>
+                        <li><a href={"https://docs.google.com/document/d/1rLWs5GR5_RTPW_aH-HG6BuVEABZgA8XztMSqpMcsPlM/edit?usp=sharing"} target={"_blank"}>Privacy Policy</a></li>
+                        <li><a
+                            href={"https://docs.google.com/document/d/1rLWs5GR5_RTPW_aH-HG6BuVEABZgA8XztMSqpMcsPlM/edit?usp=sharing"}
+                            target={"_blank"}>Terms of Service</a></li>
                       </ul>
                     </div>
                   </div>
                 </div>
-                <div className="mt-8 border-t border-gray-200 dark:border-gray-700 pt-6 text-center text-sm text-gray-600 dark:text-gray-400">
+                <div
+                    className="mt-8 border-t border-gray-200 dark:border-gray-700 pt-6 text-center text-sm text-gray-600 dark:text-gray-400">
                   &copy; 2025 Formula Cardz. All rights reserved.
+                  <br />
+                  Formula Cardz is an independent project and is not affiliated with or endorsed by Formula 1 or any related entities.
                 </div>
               </div>
             </footer>

@@ -257,7 +257,7 @@ const GrailListPage: React.FC = () => {
                             <div className="flex items-center space-x-4">
                               <div className="h-16 w-16 flex-shrink-0 rounded-md overflow-hidden">
                                 <img
-                                    src={entry.imageUrl}
+                                    src={entry.imageUrl + "?v=2"}
                                     alt={entry.driverName}
                                     className="h-full w-full object-cover"
                                 />

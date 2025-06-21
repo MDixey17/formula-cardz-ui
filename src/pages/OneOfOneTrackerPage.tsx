@@ -313,7 +313,7 @@ const OneOfOneTrackerPage: React.FC = () => {
                           {sortedCards.map((card) =>
                                   card.parallels.filter((p) => showParallel(p)).filter((p) => filterPrintingPlates ? !p.name.includes('Printing Plate') : true).map((parallel) => (
                                       <div key={`${parallel.name}-${card.id}`} className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-                                        <CardDisplayItem card={buildCardFromOneOfOne(card, parallel.imageUrl ?? '')} showActions={false}/>
+                                        <CardDisplayItem card={buildCardFromOneOfOne(card, parallel.imageUrl ? parallel.imageUrl + "?v=2" : '')} showActions={false}/>
                                         <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700">
                                           <div className="text-sm font-medium text-gray-900 dark:text-white">
                                             #{card.cardNumber} {card.driverName}
@@ -367,7 +367,7 @@ const OneOfOneTrackerPage: React.FC = () => {
                                     <tr key={`${parallel.name}-${card.id}`} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                                       <td className="px-6 py-4 whitespace-nowrap">
                                         <div className="h-10 w-10 rounded-md overflow-hidden">
-                                          <img src={parallel.imageUrl} alt={card.driverName} className="h-full w-full object-cover" />
+                                          <img src={parallel.imageUrl + "?v=2"} alt={card.driverName} className="h-full w-full object-cover" />
                                         </div>
                                       </td>
                                       <td className="px-6 py-4 whitespace-nowrap">

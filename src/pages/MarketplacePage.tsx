@@ -1,15 +1,17 @@
-import React, {useEffect, useState} from 'react';
+import React, {useEffect, useMemo, useState} from 'react';
 import { useApp } from '../context/AppContext';
 import CardDisplayItem from '../components/ui/CardDisplayItem';
 import PriceChart from '../components/ui/PriceChart';
-import { Grid, List, Search, Filter } from 'lucide-react';
+import {Grid, List, Search, Filter, TrendingUp, X} from 'lucide-react';
 import {ParallelStyles} from "../constants/globalStyles.ts";
 import {MarketPriceSnapshot} from "../types/response/MarketPrice.ts";
 import {Card, CardOwnership} from "../types";
 import LoadingSpinner from "../components/ui/LoadingSpinner.tsx";
+import {Dropdown} from "../types/Dropdown.ts";
+import {DropdownService} from "../service/dropdownService.ts";
 
 const MarketplacePage: React.FC = () => {
-  const { cardOwnerships, getMarketPriceByCardId, grailEntries } = useApp();
+  const { cardOwnerships, getMarketPriceByCardId, grailEntries, getCardsByCriteria } = useApp();
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [showFilters, setShowFilters] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -22,6 +24,51 @@ const MarketplacePage: React.FC = () => {
   const [selectedCard, setSelectedCard] = useState<string | null>(null);
   const [cardMarketPrice, setCardMarketPrice] = useState<MarketPriceSnapshot[]>([])
   const [isLoading, setLoading] = useState(false);
+
+  // Enhanced search states
+  const [setsDropdown, setSetsDropdown] = useState<Dropdown[]>([]);
+  const [loadingDropdown, setLoadingDropdown] = useState<boolean>(false);
+  const [loadingCards, setLoadingCards] = useState<boolean>(false);
+  const [selectedSet, setSelectedSet] = useState<string>('');
+  const [selectedParallelForSearch, setSelectedParallelForSearch] = useState<string>('Base');
+  const [cardOptions, setCardOptions] = useState<Card[]>([]);
+  const [parallelOptions, setParallelOptions] = useState<Dropdown[]>([]);
+  const [cardSearchQuery, setCardSearchQuery] = useState<string>('');
+  const [showCardDropdown, setShowCardDropdown] = useState(false);
+  const [searchSelectedCard, setSearchSelectedCard] = useState<string>('');
+  const [loadingPriceData, setLoadingPriceData] = useState(false);
+  const [searchPriceData, setSearchPriceData] = useState<MarketPriceSnapshot[]>([]);
+
+  useEffect(() => {
+    const getDropdowns = async () => {
+      setLoadingDropdown(true);
+      const sets = await DropdownService.getSetsDropdown()
+      setSetsDropdown(sets)
+      setLoadingDropdown(false)
+    }
+
+    getDropdowns();
+  }, [])
+
+  useEffect(() => {
+    if (!selectedSet || selectedSet === '') {
+      setCardOptions([]);
+      return
+    }
+
+    const getCardsFromSet = async () => {
+      setLoadingCards(true)
+      const data = await getCardsByCriteria(undefined, selectedSet, undefined, undefined, undefined)
+      const possibleParallels = await DropdownService.getParallelDropdown(selectedSet)
+      const parallelsWithBase = [{value: 'Base', label: 'Base'}]
+      parallelsWithBase.push(...possibleParallels)
+      setCardOptions(data);
+      setParallelOptions(parallelsWithBase);
+      setLoadingCards(false)
+    }
+
+    getCardsFromSet();
+  }, [selectedSet, getCardsByCriteria])
 
   useEffect(() => {
     if (!selectedCard) {
@@ -38,6 +85,26 @@ const MarketplacePage: React.FC = () => {
     
     fetchCardData()
   }, [selectedCard, getMarketPriceByCardId])
+
+  // Get filtered cards for autocomplete
+  const filteredCardsForSearch = useMemo(() => {
+    if (!selectedSet || selectedSet === '') {
+      return [];
+    }
+
+    let filteredCards = cardOptions
+
+    if (cardSearchQuery) {
+      const query = cardSearchQuery.toLowerCase();
+      filteredCards = filteredCards.filter(card =>
+        card.driverName.toLowerCase().includes(query) ||
+          card.constructorName.toLowerCase().includes(query) ||
+          card.cardNumber.toLowerCase().includes(query)
+      )
+    }
+
+    return filteredCards.slice(0, 16)
+  }, [selectedSet, cardSearchQuery, cardOptions])
 
   // Get unique values for filters
   const uniqueDrivers = Array.from(new Set(cardOwnerships.map(card => card.driverName)));
@@ -107,6 +174,41 @@ const MarketplacePage: React.FC = () => {
     parallels: []
   })
 
+  const handleCardSelectForSearch = (card: typeof cardOptions[0]) => {
+    setSearchSelectedCard(card.id)
+    setCardSearchQuery(`${card.driverName} - ${card.constructorName} #${card.cardNumber}`)
+    setShowCardDropdown(false)
+    fetchPriceDataForSelectedCard(card.id, selectedParallelForSearch)
+  }
+
+  const fetchPriceDataForSelectedCard = async (cardId: string, parallel: string) => {
+    setLoadingPriceData(true)
+    try {
+      const response = await getMarketPriceByCardId(cardId, parallel === 'Base' ? undefined : parallel)
+      setSearchPriceData(response.history)
+    } catch (error) {
+      console.error('Failed to fetch price data: ', error)
+      setSearchPriceData([])
+    }
+    setLoadingPriceData(false)
+  }
+
+  const handleParallelChangeForSearch = (parallel: string) => {
+    setSelectedParallelForSearch(parallel)
+    if (searchSelectedCard) {
+      fetchPriceDataForSelectedCard(searchSelectedCard, parallel)
+    }
+  }
+
+  const resetSearchForm = () => {
+    setSelectedSet('')
+    setSelectedParallelForSearch('Base')
+    setCardSearchQuery('')
+    setSearchSelectedCard('')
+    setShowCardDropdown(false)
+    setSearchPriceData([])
+  }
+
   return (
     <div className="py-6 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
@@ -140,6 +242,168 @@ const MarketplacePage: React.FC = () => {
             <Filter size={20} />
           </button>
         </div>
+      </div>
+
+      {/* Enhanced Card Search */}
+      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+        <div className="flex items-center mb-4">
+          <TrendingUp className="h-6 w-6 text-[#E10600] mr-2" />
+          <h2 className="text-xl font-bold">Price Tracker</h2>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+          {/* Set Selection */}
+          <div>
+            {loadingDropdown ? <LoadingSpinner /> : (
+                <>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Select Set</label>
+                  <select
+                      value={selectedSet}
+                      onChange={(e) => {
+                        setSelectedSet(e.target.value);
+                        setSelectedParallelForSearch('Base');
+                        setCardSearchQuery('');
+                        setSearchSelectedCard('');
+                        setSearchPriceData([]);
+                      }}
+                      className="w-full p-2 border border-gray-300 rounded-md"
+                  >
+                    <option value="">Choose a set...</option>
+                    {setsDropdown.map(set => (
+                        <option key={`${set.value}`} value={`${set.value}`}>
+                          {set.label}
+                        </option>
+                    ))}
+                  </select>
+                </>
+            )}
+          </div>
+
+          {/* Parallel Selection */}
+          {selectedSet && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Select Parallel</label>
+                <select
+                    value={selectedParallelForSearch}
+                    onChange={(e) => handleParallelChangeForSearch(e.target.value)}
+                    className="w-full p-2 border border-gray-300 rounded-md"
+                >
+                  {parallelOptions.map(parallel => (
+                      <option key={parallel.value} value={parallel.value}>{parallel.label}</option>
+                  ))}
+                </select>
+              </div>
+          )}
+
+          {/* Clear Button */}
+          {selectedSet && (
+              <div className="flex items-end">
+                <button
+                    onClick={resetSearchForm}
+                    className="w-full bg-gray-100 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-200 transition flex items-center justify-center"
+                >
+                  <X className="h-4 w-4 mr-2" />
+                  Clear Search
+                </button>
+              </div>
+          )}
+        </div>
+
+        {/* Card Search with Autocomplete */}
+        {selectedSet && (
+            <div className="relative">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Search for Card</label>
+              <div className="relative">
+                {loadingCards ? <LoadingSpinner /> : (
+                    <>
+                      <input
+                          type="text"
+                          value={cardSearchQuery}
+                          onChange={(e) => {
+                            setCardSearchQuery(e.target.value);
+                            setShowCardDropdown(true);
+                            if (!e.target.value) {
+                              setSearchSelectedCard('');
+                              setSearchPriceData([]);
+                            }
+                          }}
+                          onFocus={() => setShowCardDropdown(true)}
+                          placeholder="Type driver name, team, or card number..."
+                          className="w-full p-2 border border-gray-300 rounded-md pr-8 pl-10"
+                      />
+                      <div className="absolute left-2 top-1/2 transform -translate-y-1/2">
+                        <Search className="h-4 w-4 text-gray-400" />
+                      </div>
+                      {cardSearchQuery && (
+                          <button
+                              onClick={() => {
+                                setCardSearchQuery('');
+                                setSearchSelectedCard('');
+                                setShowCardDropdown(false);
+                                setSearchPriceData([]);
+                              }}
+                              className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                      )}
+                    </>
+                )}
+              </div>
+
+              {/* Autocomplete Dropdown */}
+              {showCardDropdown && cardSearchQuery && filteredCardsForSearch.length > 0 && (
+                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                    {filteredCardsForSearch.map(card => (
+                        <button
+                            key={card.id}
+                            onClick={() => handleCardSelectForSearch(card)}
+                            className="w-full px-3 py-2 text-left hover:bg-gray-50 flex items-center space-x-3"
+                        >
+                          <div className="flex-1">
+                            <div className="text-sm font-medium text-gray-900">
+                              {card.driverName} - {card.constructorName}
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              #{card.cardNumber}
+                            </div>
+                          </div>
+                        </button>
+                    ))}
+                  </div>
+              )}
+
+              {showCardDropdown && cardSearchQuery && filteredCardsForSearch.length === 0 && (
+                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg p-3 text-center text-gray-500">
+                    No cards found matching your search
+                  </div>
+              )}
+            </div>
+        )}
+
+        {/* Price Chart for Selected Card */}
+        {searchSelectedCard && (
+            <div className="mt-6 pt-6 border-t border-gray-200">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-bold">Price History</h3>
+                <div className="text-sm text-gray-500">
+                  {cardOptions.find(c => c.id === searchSelectedCard)?.driverName} - {selectedParallelForSearch}
+                </div>
+              </div>
+
+              {loadingPriceData ? (
+                  <div className="flex justify-center py-8">
+                    <LoadingSpinner text="Loading price data..." />
+                  </div>
+              ) : searchPriceData.length > 0 ? (
+                  <PriceChart priceData={{cardId: searchSelectedCard, history: searchPriceData}} />
+              ) : (
+                  <div className="bg-gray-50 p-8 rounded-lg text-center">
+                    <p className="text-gray-500">No price data available for this card and parallel combination.</p>
+                  </div>
+              )}
+            </div>
+        )}
       </div>
 
       {/* Search and Filters */}
@@ -355,7 +619,7 @@ const MarketplacePage: React.FC = () => {
                           >
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div className="h-10 w-10 rounded-md overflow-hidden">
-                                <img src={card.imageUrl} alt={card.driverName} className="h-full w-full object-cover" />
+                                <img src={card.imageUrl + "?v=2"} alt={card.driverName} className="h-full w-full object-cover" />
                               </div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
@@ -370,7 +634,7 @@ const MarketplacePage: React.FC = () => {
                       <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
                           ParallelStyles.get(card.parallel ?? 'Base') ?? 'bg-gray-100 text-gray-800'
                       }`}>
-                        {card.parallel}
+                        {card.parallel ?? 'Base'}
                       </span>
                               {card.printRun && (
                                   <span className="text-xs text-gray-500 ml-1">/{card.printRun}</span>
