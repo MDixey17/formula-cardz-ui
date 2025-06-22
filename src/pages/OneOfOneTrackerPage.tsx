@@ -97,10 +97,14 @@ const OneOfOneTrackerPage: React.FC = () => {
   const allParallels = oneOfOneCards.flatMap(card => card.parallels);
 
   // Count total one-of-one parallels
-  const totalOneOfOnes = allParallels.filter(p => p.isOneOfOne === true).length;
+  const totalOneOfOnes = filterPrintingPlates
+      ? allParallels.filter(p => p.isOneOfOne === true && !p.name.includes('Printing Plate')).length
+      : allParallels.filter(p => p.isOneOfOne === true).length;
 
   // Count found one-of-one parallels
-  const foundCount = allParallels.filter(p => p.isOneOfOne === true && p.isOneOfOneFound === true).length;
+  const foundCount = filterPrintingPlates
+      ? allParallels.filter(p => p.isOneOfOne === true && p.isOneOfOneFound === true && !p.name.includes('Printing Plate')).length
+      : allParallels.filter(p => p.isOneOfOne === true && p.isOneOfOneFound === true).length
 
   // Calculate missing
   const missingCount = totalOneOfOnes - foundCount;
