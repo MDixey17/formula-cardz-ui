@@ -65,7 +65,7 @@ const CardBattleDisplay: React.FC<CardBattleDisplayProps> = ({
             />
             <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black to-transparent">
               <div className="text-white">
-                <p className="font-bold">{cardOne.driverName}</p>
+                <p className="font-bold">({cardOne.cardNumber}) {cardOne.driverName}</p>
                 <p className="text-sm">{cardOne.setName}</p>
               </div>
             </div>
@@ -110,7 +110,7 @@ const CardBattleDisplay: React.FC<CardBattleDisplayProps> = ({
             />
             <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black to-transparent">
               <div className="text-white">
-                <p className="font-bold">{cardTwo.driverName}</p>
+                <p className="font-bold">({cardTwo.cardNumber}) {cardTwo.driverName}</p>
                 <p className="text-sm">{cardTwo.setName}</p>
               </div>
             </div>
