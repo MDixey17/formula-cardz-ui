@@ -1,6 +1,6 @@
 import React from 'react';
 import { Card } from '../../types';
-import { ExternalLink, Star } from 'lucide-react';
+import {DollarSign, ExternalLink, Star} from 'lucide-react';
 import {AttributeStyles} from "../../constants/globalStyles.ts";
 
 interface MarketplaceListingProps {
@@ -66,11 +66,13 @@ const MarketplaceListing: React.FC<MarketplaceListingProps> = ({ listing, card, 
           
           <div className="flex flex-wrap justify-between items-center mt-4">
             <div className="flex items-center text-sm">
-              <img 
-                src={listing.source === 'eBay' ? 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/1b/EBay_logo.svg/200px-EBay_logo.svg.png' : ''} 
-                alt={listing.source}
-                className="h-4 mr-2"
-              />
+              {listing.source.toLowerCase() === 'ebay' ? (
+                  <img
+                      src={'https://upload.wikimedia.org/wikipedia/commons/thumb/1/1b/EBay_logo.svg/200px-EBay_logo.svg.png'}
+                      alt={listing.source}
+                      className="h-4 mr-2"
+                  />
+              ) : <DollarSign />}
               <div className="flex items-center">
                 <Star className="h-3 w-3 text-yellow-500 mr-1" fill="currentColor" />
                 <span className="text-gray-600">{listing.sellerRating}%</span>

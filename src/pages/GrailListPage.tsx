@@ -46,8 +46,16 @@ const GrailListPage: React.FC = () => {
       const data: MarketPrice[] = []
       for (let i = 0; i < grailEntries.length; i++) {
         const grail = grailEntries[i];
-        const response = await getMarketPriceByCardId(grail.id, grail.parallel)
-        data.push(response)
+        try {
+          const response = await getMarketPriceByCardId(grail.id, grail.parallel)
+          data.push(response)
+        } catch (error) {
+          console.error('Caught error getting market prices for grail cards: ', error)
+          data.push({
+            cardId: grail.id,
+            history: []
+          })
+        }
       }
       setMarketPrices(data)
       setLoading(false)
@@ -126,11 +134,14 @@ const GrailListPage: React.FC = () => {
 
   const selectedCardMarketData = marketPrices.filter(snapshot => snapshot.cardId === selectedCard)
 
-  const buildRemoveGrailRequest = (): RemoveGrailRequest => ({
-    userId: user!.id,
-    cardId: selectedCard ?? '',
-    parallel: grailEntries.find((grail) => grail.id === selectedCard)!.parallel
-  })
+  const buildRemoveGrailRequest = (cardId: string): RemoveGrailRequest => {
+    const foundParallel = grailEntries.find((grail) => grail.id === cardId)?.parallel
+    return {
+      userId: user!.id,
+      cardId: cardId,
+      parallel: foundParallel !== undefined && foundParallel !== '' ? foundParallel : undefined,
+    }
+  }
 
   const handleCardSelect = (card: typeof cards[0]) => {
     setNewCardId(card.id);
@@ -145,7 +156,7 @@ const GrailListPage: React.FC = () => {
     await addCardToGrailList({
       userId: user.id,
       cardId: newCardId,
-      parallel: selectedParallel === null ? undefined: selectedParallel,
+      parallel: selectedParallel === null || selectedParallel === '' ? undefined: selectedParallel,
       notifyOnAvailable: true
     });
     setAddLoading(false)
@@ -223,10 +234,9 @@ const GrailListPage: React.FC = () => {
                     cardId: selectedCard,
                     history: []
                   }}/>
-                  <h3 className="text-lg font-bold mt-6 mb-3">Available Listings</h3>
                   <div className="mt-6 flex justify-center">
                     <button
-                        onClick={() => removeCardFromGrailList(buildRemoveGrailRequest())}
+                        onClick={() => removeCardFromGrailList(buildRemoveGrailRequest(selectedCard))}
                         className="bg-[#E10600] text-white px-4 py-2 rounded-md hover:bg-red-700 transition"
                     >
                       Remove from Grail List
@@ -264,7 +274,7 @@ const GrailListPage: React.FC = () => {
                               </div>
                               <div className="flex-1 min-w-0">
                                 <p className="text-sm font-medium text-gray-900 truncate">
-                                  {entry.driverName}
+                                  ({entry.cardNumber}) {entry.driverName}
                                 </p>
                                 <p className="text-sm text-gray-500 truncate">
                                   {entry.setName}{entry.parallel ? ` - ${entry.parallel}` : ''}
@@ -288,7 +298,7 @@ const GrailListPage: React.FC = () => {
                                   View Details
                                 </button>
                                 <button
-                                    onClick={() => removeCardFromGrailList(buildRemoveGrailRequest())}
+                                    onClick={() => removeCardFromGrailList(buildRemoveGrailRequest(entry.id))}
                                     className="text-gray-400 hover:text-[#E10600]"
                                 >
                                   Remove
@@ -350,7 +360,7 @@ const GrailListPage: React.FC = () => {
                                 }}
                                 className="w-full p-2 border border-gray-300 rounded-md"
                             >
-                              <option value="">All Parallels</option>
+                              <option value="">Base</option>
                               {possibleParallels.map(parallel => (
                                   <option key={parallel.value} value={parallel.value}>{parallel.label}</option>
                               ))}
