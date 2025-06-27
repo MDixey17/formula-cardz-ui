@@ -14,9 +14,3 @@ export interface GrailResponse {
     // Grail fields
     notifyOnAvailable: boolean
 }
-
-export interface AddGrailResponse {
-    _id: string
-    userId: string
-    grails: GrailResponse[]
-}

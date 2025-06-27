@@ -43,6 +43,7 @@ interface AppContextType {
   getCardsByCriteria: (year?: number, setName?: string, driverName?: string, constructorName?: string, cardNumber?: string) => Promise<Card[]>
   getMarketPriceByCardId: (cardId: string, parallel?: string) => Promise<MarketPrice>;
   getCardBattles: () => Promise<CardBattle[]>;
+  isUserDataLoading: boolean
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -51,6 +52,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [user, setUser] = useState<User | null>(null);
   const [cardOwnerships, setCardOwnerships] = useState<CardOwnership[]>([]);
   const [grailEntries, setGrailEntries] = useState<GrailListEntry[]>([]);
+  const [isUserDataLoading, setUserDataLoading] = useState<boolean>(false);
 
   useEffect(() => {
       // Check if the last login in localStorage was over 24 hours ago
@@ -70,6 +72,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
       const updatedOwnershipAndGrails = async () => {
           if (user) {
+              setUserDataLoading(true);
               // Get card ownerships and grails
               const ownershipData = await CardOwnershipService.getCardsOwnedByUserId(user.id)
               const grailData = await GrailService.getUserGrailCards(user.id)
@@ -80,6 +83,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                   ...grail
               })))
           }
+          setUserDataLoading(false)
       }
 
       updatedOwnershipAndGrails()
@@ -157,11 +161,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const removeCardFromCollection = async (card: RemoveCardFromCollectionRequest) => {
     if (user) {
+        setUserDataLoading(true);
         await CardOwnershipService.removeCardFromCollection(card)
         const updatedCollection = await CardOwnershipService.getCardsOwnedByUserId(user.id)
         setCardOwnerships(updatedCollection.map((card) => ({
             ...card,
         })))
+        setUserDataLoading(false)
     } else {
         throw new Error('Please login to update cards in your collection')
     }
@@ -275,6 +281,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             getCardsByCriteria,
             getMarketPriceByCardId,
             getCardBattles,
+            isUserDataLoading
           }}
       >
         {children}

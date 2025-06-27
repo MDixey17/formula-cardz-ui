@@ -9,7 +9,7 @@ import LoadingSpinner from "../components/ui/LoadingSpinner.tsx";
 import {ParallelUtils} from "../utils/parallelUtils.ts";
 
 const CollectionPage: React.FC = () => {
-  const { user, cardOwnerships, addCardToCollection, removeCardFromCollection, updateCardOwnership, getCardsByCriteria } = useApp();
+  const { user, cardOwnerships, addCardToCollection, removeCardFromCollection, updateCardOwnership, getCardsByCriteria, isUserDataLoading } = useApp();
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [sortBy, setSortBy] = useState<string>('driver');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
@@ -24,7 +24,6 @@ const CollectionPage: React.FC = () => {
   const [editQuantity, setEditQuantity] = useState(1);
   const [editCondition, setEditCondition] = useState('Raw');
   const [editPurchasePrice, setEditPurchasePrice] = useState<string>('');
-  const [isLoading, setLoading] = useState(true)
   const [isSubmitLoading, setSubmitLoading] = useState(false);
 
   // Add card modal states
@@ -45,10 +44,8 @@ const CollectionPage: React.FC = () => {
 
   useEffect(() => {
     const getDropdowns = async () => {
-      setLoading(true)
       const sets = await DropdownService.getSetsDropdown();
       setSetsDropdown(sets);
-      setLoading(false)
     }
 
     getDropdowns()
@@ -382,8 +379,8 @@ const CollectionPage: React.FC = () => {
         )}
 
         {/* Collection */}
-        {isLoading && <LoadingSpinner />}
-        {!isLoading && (
+        {isUserDataLoading && <LoadingSpinner />}
+        {!isUserDataLoading && (
             <>
               {sortedCards.length === 0 ? (
                   <div className="bg-white rounded-lg shadow p-8 text-center">

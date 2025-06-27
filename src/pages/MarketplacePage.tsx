@@ -22,6 +22,7 @@ const MarketplacePage: React.FC = () => {
   const [filterRookieOnly, setFilterRookieOnly] = useState(false);
   const [sortBy, setSortBy] = useState<string>('recent');
   const [selectedCard, setSelectedCard] = useState<string | null>(null);
+  const [selectedParallel, setSelectedParallel] = useState<string | null>(null);
   const [cardMarketPrice, setCardMarketPrice] = useState<MarketPriceSnapshot[]>([])
 
   // Enhanced search states
@@ -473,7 +474,7 @@ const MarketplacePage: React.FC = () => {
                   onChange={(e) => setFilterParallel(e.target.value)}
                   className="w-full p-2 border border-gray-300 rounded-md text-sm"
                 >
-                  <option value="">All Parallels</option>
+                  <option value="">Base</option>
                   {uniqueParallels.map(parallel => (
                     <option key={parallel} value={parallel}>{parallel}</option>
                   ))}
@@ -546,7 +547,7 @@ const MarketplacePage: React.FC = () => {
                   Close
                 </button>
               </div>
-              <PriceChart priceData={{cardId: selectedCard, history: cardMarketPrice}} />
+              <PriceChart priceData={{cardId: selectedCard, history: selectedParallel ? cardMarketPrice.filter(cmp => cmp.parallel === selectedParallel) : cardMarketPrice}} />
             </div>
           </div>
         </div>
@@ -558,7 +559,10 @@ const MarketplacePage: React.FC = () => {
                 <div
                     key={card.id}
                     className="bg-white rounded-lg shadow p-4 cursor-pointer hover:shadow-md transition"
-                    onClick={() => setSelectedCard(card.id)}
+                    onClick={() => {
+                      setSelectedCard(card.id)
+                      setSelectedParallel(card.parallel ?? null)
+                    }}
                 >
                   <CardDisplayItem
                       card={buildCardFromOwnership(card)}
@@ -608,7 +612,10 @@ const MarketplacePage: React.FC = () => {
                     <tr
                         key={card.id}
                         className="hover:bg-gray-50 cursor-pointer"
-                        onClick={() => setSelectedCard(card.id)}
+                        onClick={() => {
+                          setSelectedCard(card.id)
+                          setSelectedParallel(card.parallel ?? null)
+                        }}
                     >
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="h-10 w-10 rounded-md overflow-hidden">
