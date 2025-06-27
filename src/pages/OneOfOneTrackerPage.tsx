@@ -129,7 +129,14 @@ const OneOfOneTrackerPage: React.FC = () => {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
           <div>
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white">1/1 Tracker</h1>
-            <p className="text-gray-600 dark:text-gray-400">Track and discover one-of-one Formula 1 cards</p>
+            <p className="text-gray-600 dark:text-gray-400">
+              Track one-of-one Formula 1 cards
+              <br />
+              <br />
+              NOTE: This is entirely based on community input.
+              <br />
+              Even if a one-of-one is said to be missing, there is a chance it has been found and not been shared publicly.
+            </p>
           </div>
           <div className="mt-4 md:mt-0 flex space-x-2">
             <button

@@ -1,4 +1,4 @@
-import {GrailResponse} from "../types/response/Grail.ts";
+import {AddGrailResponse, GrailResponse} from "../types/response/Grail.ts";
 import {axiosService} from "./axiosService.ts";
 import {AddGrailRequest, RemoveGrailRequest, UpdateGrailRequest} from "../types/request/Grail.ts";
 
@@ -7,8 +7,8 @@ const getUserGrailCards = async (userId: string): Promise<GrailResponse[]> => {
     return response.data
 }
 
-const addCardToGrail = async (request: AddGrailRequest): Promise<GrailResponse[]> => {
-    const response = await axiosService.post<GrailResponse[]>("/grails", request)
+const addCardToGrail = async (request: AddGrailRequest): Promise<AddGrailResponse[]> => {
+    const response = await axiosService.post<AddGrailResponse[]>("/grails", request)
     return response.data
 }
 

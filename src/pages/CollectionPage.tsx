@@ -6,6 +6,7 @@ import {Card} from "../types";
 import {Dropdown} from "../types/Dropdown.ts";
 import {DropdownService} from "../service/dropdownService.ts";
 import LoadingSpinner from "../components/ui/LoadingSpinner.tsx";
+import {ParallelUtils} from "../utils/parallelUtils.ts";
 
 const CollectionPage: React.FC = () => {
   const { user, cardOwnerships, addCardToCollection, removeCardFromCollection, updateCardOwnership, getCardsByCriteria } = useApp();
@@ -24,6 +25,7 @@ const CollectionPage: React.FC = () => {
   const [editCondition, setEditCondition] = useState('Raw');
   const [editPurchasePrice, setEditPurchasePrice] = useState<string>('');
   const [isLoading, setLoading] = useState(true)
+  const [isSubmitLoading, setSubmitLoading] = useState(false);
 
   // Add card modal states
   const [selectedSet, setSelectedSet] = useState<string>('2020 Topps Chrome Formula 1')
@@ -146,6 +148,7 @@ const CollectionPage: React.FC = () => {
     setEditQuantity(card.quantity);
     setEditCondition(card.condition);
     setEditPurchasePrice(card.purchasePrice?.toString() || '');
+    setSelectedParallel(card.parallel ?? '')
     setShowEditModal(true);
   };
 
@@ -153,41 +156,49 @@ const CollectionPage: React.FC = () => {
     if (!selectedCard) return;
 
     if (user) {
+      setSubmitLoading(true)
       await updateCardOwnership({
         userId: user.id,
         cardId: selectedCard,
         quantity: editQuantity,
         purchasePrice: Number(editPurchasePrice),
-        condition: editCondition
+        condition: editCondition,
+        parallel: selectedParallel === '' ? undefined : selectedParallel,
       });
     }
 
     setShowEditModal(false);
     setSelectedCard(null);
+    setSubmitLoading(false)
   };
 
-  const handleDeleteCard = async (cardId: string, parallel?: string) => {
+  const handleDeleteCard = async (cardId: string, condition: string, parallel?: string) => {
     if (confirm('Are you sure you want to remove this card from your collection?') && user) {
+      setSubmitLoading(true)
       await removeCardFromCollection({
         userId: user.id,
         cardId: cardId,
         quantityToSubtract: editQuantity,
-        condition: editCondition,
+        condition: condition,
         parallel: parallel,
       });
+      setSubmitLoading(false)
     }
   };
 
   const handleAddCard = async () => {
     if (user) {
+      setSubmitLoading(true)
       await addCardToCollection({
         userId: user.id,
         cardId: newCardId,
         quantity: newQuantity,
         condition: newCondition,
-        purchasePrice: newPurchasePrice === undefined ? undefined : Number(newPurchasePrice)
+        purchasePrice: newPurchasePrice === undefined ? undefined : Number(newPurchasePrice),
+        parallel: selectedParallel === '' ? undefined : selectedParallel,
       });
     }
+    setSubmitLoading(false)
     setShowAddModal(false);
     resetNewCardForm();
   };
@@ -325,7 +336,7 @@ const CollectionPage: React.FC = () => {
                       onChange={(e) => setFilterParallel(e.target.value)}
                       className="w-full p-2 border border-gray-300 rounded-md"
                   >
-                    <option value="">All Parallels</option>
+                    <option value="">Base</option>
                     {uniqueParallels.map(parallel => (
                         <option key={parallel} value={parallel}>{parallel}</option>
                     ))}
@@ -415,7 +426,7 @@ const CollectionPage: React.FC = () => {
                                       <Edit2 className="h-4 w-4 text-gray-600"/>
                                     </button>
                                     <button
-                                        onClick={() => handleDeleteCard(card.id)}
+                                        onClick={() => handleDeleteCard(card.id, card.condition, card.parallel)}
                                         className="p-1 bg-white rounded-full shadow hover:bg-gray-100"
                                         title="Remove Card"
                                     >
@@ -432,12 +443,12 @@ const CollectionPage: React.FC = () => {
                                     <span className="text-gray-500">Condition:</span>
                                     <span className="font-medium">{card.condition}</span>
                                   </div>
-                                  {card.purchasePrice && (
+                                  {card.purchasePrice && card.purchasePrice > 0 ? (
                                       <div className="flex justify-between text-sm mt-1">
                                         <span className="text-gray-500">Purchase:</span>
                                         <span className="font-medium">${card.purchasePrice.toFixed(2)}</span>
                                       </div>
-                                  )}
+                                  ) : <></>}
                                   <div className="flex justify-start mt-2">
                                     {card.printRun && (
                                         <div className={`text-xs font-bold px-2 py-1 rounded-full ${AttributeStyles.get('printRun')}`}>
@@ -450,7 +461,7 @@ const CollectionPage: React.FC = () => {
                                                 ParallelStyles.get(card.parallel) ?? 'bg-gray-100 text-gray-800'
                                             }`}
                                         >
-                                          {card.parallel}
+                                          {ParallelUtils.getParallelDisplayName(card.parallel)}
                                         </div>
                                     )}
                                     {card.rookieCard && (
@@ -527,7 +538,7 @@ const CollectionPage: React.FC = () => {
                                     {card.quantity}
                                   </td>
                                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    {card.purchasePrice
+                                    {card.purchasePrice && card.purchasePrice > 0
                                         ? `$${card.purchasePrice.toFixed(2)}`
                                         : '-'}
                                   </td>
@@ -539,7 +550,7 @@ const CollectionPage: React.FC = () => {
                                       Edit
                                     </button>
                                     <button
-                                        onClick={() => handleDeleteCard(card.id)}
+                                        onClick={() => handleDeleteCard(card.id, card.condition, card.parallel)}
                                         className="text-[#E10600] hover:text-red-800"
                                     >
                                       Delete
@@ -597,7 +608,7 @@ const CollectionPage: React.FC = () => {
                             }}
                             className="w-full p-2 border border-gray-300 rounded-md"
                         >
-                          <option value="">All Parallels</option>
+                          <option value="">Base</option>
                           {possibleParallels.map(parallel => (
                               <option key={parallel.value} value={parallel.value}>{parallel.label}</option>
                           ))}
@@ -713,7 +724,7 @@ const CollectionPage: React.FC = () => {
                   </button>
                   <button
                       onClick={handleAddCard}
-                      disabled={!newCardId}
+                      disabled={!newCardId || isSubmitLoading}
                       className="px-4 py-2 bg-[#0600E1] text-white rounded-md hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
                   >
                     Add Card
