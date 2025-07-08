@@ -185,7 +185,11 @@ const MarketplacePage: React.FC = () => {
     setLoadingPriceData(true)
     try {
       const response = await getMarketPriceByCardId(cardId, parallel === 'Base' ? undefined : parallel)
-      setSearchPriceData(response.history)
+      let historyData = response.history
+      if (parallel === 'Base') {
+        historyData = response.history.filter(sale => sale.parallel === undefined)
+      }
+      setSearchPriceData(historyData)
     } catch (error) {
       console.error('Failed to fetch price data: ', error)
       setSearchPriceData([])
@@ -214,7 +218,14 @@ const MarketplacePage: React.FC = () => {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Marketplace</h1>
-          <p className="text-gray-600">Discover and track Formula 1 trading cards</p>
+          <p className="text-gray-600">
+            Discover and track Formula 1 trading cards
+            <br />
+            <br />
+            NOTE: Sales are gathered automatically and can be subject to incorrect values if the title of the card sold does not match the item actually sold.
+            <br />
+            If you notice any significant errors, please report them!
+          </p>
         </div>
         <div className="mt-4 md:mt-0 flex space-x-2">
           <button
