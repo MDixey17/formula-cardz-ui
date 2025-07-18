@@ -607,18 +607,12 @@ const MarketplacePage: React.FC = () => {
                   Parallel
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Avg. Price
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Actions
                 </th>
               </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
               {sortedCards.map((card) => {
-                const latestPrice = cardMarketPrice
-                    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())[0];
-
                 return (
                     <tr
                         key={card.id}
@@ -650,11 +644,6 @@ const MarketplacePage: React.FC = () => {
                         {card.printRun && (
                             <span className="text-xs text-gray-500 ml-1">/{card.printRun}</span>
                         )}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-[#E10600]">
-                          {latestPrice ? `$${latestPrice.averagePrice.toFixed(2)}` : 'N/A'}
-                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm">
                         <button className="text-[#0600E1] hover:text-blue-800">
