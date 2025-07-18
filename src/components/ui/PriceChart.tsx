@@ -33,7 +33,12 @@ const PriceChart: React.FC<PriceChartProps> = ({ priceData }) => {
     );
   }
 
-  return (
+  // Max and Min Prices
+  const minLowestPrice = Math.min(...sortedData.map(entry => entry.lowestPrice));
+  const maxHighestPrice = Math.max(...sortedData.map(entry => entry.highestPrice));
+  const averageOverall = sortedData.reduce((sum, entry) => sum + entry.averagePrice, 0) / sortedData.length
+
+    return (
     <div className="p-4 bg-white rounded-lg shadow">
       <h3 className="text-lg font-bold mb-4">Price History</h3>
       <div className="h-48 relative">
@@ -93,17 +98,17 @@ const PriceChart: React.FC<PriceChartProps> = ({ priceData }) => {
       <div className="flex justify-between mt-4 pt-4 border-t border-gray-200">
         <div className="text-center">
           <div className="text-xs text-gray-500">Lowest</div>
-          <div className="font-bold">${sortedData[sortedData.length - 1].lowestPrice.toFixed(2)}</div>
+          <div className="font-bold">${minLowestPrice.toFixed(2)}</div>
         </div>
         <div className="text-center">
           <div className="text-xs text-gray-500">Average</div>
           <div className="font-bold text-[#E10600]">
-            ${sortedData[sortedData.length - 1].averagePrice.toFixed(2)}
+            ${averageOverall.toFixed(2)}
           </div>
         </div>
         <div className="text-center">
           <div className="text-xs text-gray-500">Highest</div>
-          <div className="font-bold">${sortedData[sortedData.length - 1].highestPrice.toFixed(2)}</div>
+          <div className="font-bold">${maxHighestPrice.toFixed(2)}</div>
         </div>
       </div>
     </div>
