@@ -36,7 +36,9 @@ const PriceChart: React.FC<PriceChartProps> = ({ priceData }) => {
   // Max and Min Prices
   const minLowestPrice = Math.min(...sortedData.map(entry => entry.lowestPrice));
   const maxHighestPrice = Math.max(...sortedData.map(entry => entry.highestPrice));
-  const averageOverall = sortedData.reduce((sum, entry) => sum + entry.averagePrice, 0) / sortedData.length
+  const averageOverall = sortedData.length > 0
+    ? sortedData.reduce((sum, entry) => sum + entry.averagePrice, 0) / sortedData.length
+      : 0
 
     return (
     <div className="p-4 bg-white rounded-lg shadow">
