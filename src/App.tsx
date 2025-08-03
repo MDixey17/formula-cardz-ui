@@ -13,6 +13,8 @@ import OneOfOneTrackerPage from './pages/OneOfOneTrackerPage';
 import LoginPage from "./pages/LoginPage.tsx";
 import RegisterPage from "./pages/RegisterPage.tsx";
 import PrivateRoute from "./components/PrivateRoute.tsx";
+import ForgotPasswordPage from "./pages/ForgotPasswordPage.tsx";
+import ResetPasswordPage from "./pages/ResetPasswordPage.tsx";
 
 function App() {
   return (
@@ -26,6 +28,8 @@ function App() {
                 <Route path="/" element={<HomePage />} />
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/register" element={<RegisterPage />} />
+                <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+                <Route path="/reset-password" element={<ResetPasswordPage />} />
                 <Route path="/collection" element={(
                     <PrivateRoute>
                       <CollectionPage />
