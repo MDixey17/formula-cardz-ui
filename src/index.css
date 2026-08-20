@@ -1,3 +1,66 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply bg-carbon-50 text-carbon-950 antialiased dark:bg-carbon-950 dark:text-carbon-100;
+    font-feature-settings: 'cv11', 'ss01';
+  }
+  :focus-visible {
+    @apply outline-none ring-2 ring-racing-500 ring-offset-2 ring-offset-white dark:ring-offset-carbon-950 rounded;
+  }
+  ::selection {
+    @apply bg-racing-600 text-white;
+  }
+}
+
+@layer components {
+  .skeleton {
+    @apply relative overflow-hidden bg-carbon-200/70 dark:bg-carbon-800 rounded;
+  }
+  .skeleton::after {
+    content: '';
+    @apply absolute inset-0 -translate-x-full animate-shimmer;
+    background-image: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.55),
+      transparent
+    );
+  }
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed select-none;
+  }
+  .btn-primary {
+    @apply btn bg-racing-600 text-white hover:bg-racing-700 active:scale-[0.98] shadow-sm;
+  }
+  .btn-danger {
+    @apply btn bg-redline-600 text-white hover:bg-redline-700 active:scale-[0.98];
+  }
+  .btn-ghost {
+    @apply btn bg-transparent text-carbon-700 hover:bg-carbon-100 active:scale-[0.98] dark:text-carbon-200 dark:hover:bg-carbon-800;
+  }
+  .btn-outline {
+    @apply btn border border-carbon-300 bg-white text-carbon-800 hover:bg-carbon-50 active:scale-[0.98] dark:border-carbon-700 dark:bg-carbon-900 dark:text-carbon-100 dark:hover:bg-carbon-800;
+  }
+  .input {
+    @apply w-full rounded-xl border border-carbon-300 bg-white px-4 py-2.5 text-carbon-950 placeholder:text-carbon-400 transition focus:border-racing-500 focus:ring-2 focus:ring-racing-500/30 dark:border-carbon-700 dark:bg-carbon-900 dark:text-carbon-100 dark:placeholder:text-carbon-500;
+  }
+  .label {
+    @apply block text-sm font-semibold text-carbon-700 mb-1.5 dark:text-carbon-300;
+  }
+  .card {
+    @apply rounded-2xl border border-carbon-200 bg-white shadow-card dark:border-carbon-800 dark:bg-carbon-900;
+  }
+  .badge {
+    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold;
+  }
+  .chip {
+    @apply inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition;
+  }
+}
