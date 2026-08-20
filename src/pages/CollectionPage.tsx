@@ -1,799 +1,676 @@
-import React, {useEffect, useMemo, useState} from 'react';
-import { useApp } from '../context/AppContext';
-import {Grid, List, Filter, SortAsc, SortDesc, FileCog, Plus, Edit2, Trash2, X} from 'lucide-react';
-import {AttributeStyles, ParallelStyles} from "../constants/globalStyles.ts";
-import {Card} from "../types";
-import {Dropdown} from "../types/Dropdown.ts";
-import {DropdownService} from "../service/dropdownService.ts";
-import LoadingSpinner from "../components/ui/LoadingSpinner.tsx";
-import {ParallelUtils} from "../utils/parallelUtils.ts";
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
+import {
+  Layers,
+  LogIn,
+  Pencil,
+  Plus,
+  Trash2,
+  X,
+  Check,
+  Search,
+} from 'lucide-react';
+import { api, ApiError } from '@/lib/api';
+import { useAuth } from '@/lib/auth-context';
+import { useSets } from '@/lib/use-sets';
+import type { CardResponse, OwnershipEntry } from '@/types';
+import {
+  EmptyState,
+  ErrorState,
+  Spinner,
+} from '@/components/ui';
 
-const CollectionPage: React.FC = () => {
-  const { user, cardOwnerships, addCardToCollection, removeCardFromCollection, updateCardOwnership, getCardsByCriteria, isUserDataLoading } = useApp();
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const [sortBy, setSortBy] = useState<string>('driver');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
-  const [showFilters, setShowFilters] = useState(false);
-  const [filterDriver, setFilterDriver] = useState<string>('');
-  const [filterTeam, setFilterTeam] = useState<string>('');
-  const [filterParallel, setFilterParallel] = useState<string>('');
-  const [filterCondition, setFilterCondition] = useState<string>('');
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [selectedCard, setSelectedCard] = useState<string | null>(null);
-  const [editQuantity, setEditQuantity] = useState(1);
-  const [editCondition, setEditCondition] = useState('Raw');
-  const [editPurchasePrice, setEditPurchasePrice] = useState<string>('');
-  const [isSubmitLoading, setSubmitLoading] = useState(false);
+const CONDITIONS = [
+  'Raw',
+  'PSA 10',
+  'PSA 9',
+  'PSA 8',
+  'PSA 7',
+  'PSA 6',
+  'PSA 5',
+  'PSA 4',
+  'PSA 3',
+  'PSA 2',
+  'PSA 1',
+  'BGS 10',
+  'BGS 9.5',
+  'BGS 9',
+  'BGS 8.5',
+  'BGS 8',
+  'BGS 7.5',
+  'BGS 7',
+  'BGS 6.5',
+  'BGS 6',
+  'SGC 10',
+  'SGC 9.5',
+  'SGC 9',
+  'SGC 8.5',
+  'SGC 8',
+  'SGC 7.5',
+  'SGC 7',
+  'SGC 6.5',
+  'SGC 6',
+  'Other',
+];
 
-  // Add card modal states
-  const [selectedSet, setSelectedSet] = useState<string>('2020 Topps Chrome Formula 1')
-  const [selectedParallel, setSelectedParallel] = useState<string>('')
-  const [cardSearchQuery, setCardSearchQuery] = useState<string>('')
-  const [showCardDropdown, setShowCardDropdown] = useState<boolean>(false)
-  const [newCardId, setNewCardId] = useState<string>('');
-  const [newQuantity, setNewQuantity] = useState(1);
-  const [newCondition, setNewCondition] = useState('Raw');
-  const [newPurchasePrice, setNewPurchasePrice] = useState<string>('');
+export function CollectionPage() {
+  const { user } = useAuth();
 
-  // Dropdowns
-  const [parallelDropdown, setParallelDropdown] = useState<Dropdown[]>([])
-  const [setsDropdown, setSetsDropdown] = useState<Dropdown[]>([])
-  const [cards, setCards] = useState<Card[]>([])
-  const [possibleParallels, setPossibleParallels] = useState<Dropdown[]>([])
+  if (!user) return <UnauthenticatedCollection />;
 
-  useEffect(() => {
-    const getDropdowns = async () => {
-      const sets = await DropdownService.getSetsDropdown();
-      setSetsDropdown(sets);
-    }
+  return <AuthenticatedCollection userId={user.id} />;
+}
 
-    getDropdowns()
-  }, [])
+function UnauthenticatedCollection() {
+  return (
+      <div className="mx-auto max-w-7xl px-4 md:px-6 py-10">
+        <h1 className="font-display text-3xl font-extrabold text-carbon-950 dark:text-white">
+          Collection
+        </h1>
+        <div className="mt-6">
+          <EmptyState
+              icon={<LogIn className="h-8 w-8" />}
+              title="Log in to view your collection"
+              message="Your personal collection is only visible when you're signed in. It isn't a marketplace — just your checklist of owned cards."
+              action={
+                <div className="flex gap-2 justify-center">
+                  <Link to="/login" className="btn-primary px-4 py-2">
+                    Log In
+                  </Link>
+                  <Link to="/register" className="btn-outline px-4 py-2">
+                    Register
+                  </Link>
+                </div>
+              }
+          />
+        </div>
+      </div>
+  );
+}
 
-  useEffect(() => {
-    if (!selectedSet) return;
-    const getPossibleParallels = async () => {
-      const possibleParallels = await DropdownService.getParallelDropdown(selectedSet)
-      const possibleCards = await getCardsByCriteria(undefined, selectedSet, undefined, undefined, undefined)
-      setParallelDropdown(possibleParallels);
-      setPossibleParallels(possibleParallels)
-      setCards(possibleCards);
-    }
+function AuthenticatedCollection({ userId }: { userId: string }) {
+  const [entries, setEntries] = useState<OwnershipEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [editing, setEditing] = useState<OwnershipEntry | null>(null);
+  const [showAdd, setShowAdd] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
 
-    getPossibleParallels();
-  }, [selectedSet, getCardsByCriteria])
-
-  // Get unique values for filters
-  const uniqueDrivers = Array.from(new Set(cardOwnerships.map(card => card.driverName)));
-  const uniqueTeams = Array.from(new Set(cardOwnerships.map(card => card.constructorName)));
-  const uniqueParallels = Array.from(new Set(cardOwnerships.map(card => card.parallel)));
-  const uniqueConditions = Array.from(new Set(cardOwnerships.map(ownership => ownership.condition)));
-
-  // Get filtered cards for autocomplete
-  const filteredCardsForAdd = useMemo(() => {
-    if (!selectedSet) return [];
-
-    let filteredCards = cards.filter(card =>
-        card.setName === selectedSet
-    );
-
-    if (selectedParallel) {
-      filteredCards = filteredCards.filter(card => card.parallels.some((p) => p.name === selectedParallel));
-    }
-
-    if (cardSearchQuery) {
-      const query = cardSearchQuery.toLowerCase();
-      filteredCards = filteredCards.filter(card =>
-          card.driverName.toLowerCase().includes(query) ||
-          card.constructorName.toLowerCase().includes(query) ||
-          card.cardNumber.includes(query)
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await api.getOwnership(userId);
+      setEntries(data);
+    } catch (e) {
+      setError(
+          e instanceof ApiError ? e.message : 'Unable to load your collection.'
       );
+    } finally {
+      setLoading(false);
     }
+  }, [userId]);
 
-    return filteredCards.slice(0, 10); // Limit to 10 results for performance
-  }, [selectedSet, selectedParallel, cardSearchQuery, cards])
+  useEffect(() => {
+    load();
+  }, [load]);
 
-  // Apply filters
-  const filteredCards = cardOwnerships.filter(card => {
-    if (filterDriver && card.driverName !== filterDriver) return false;
-    if (filterTeam && card.constructorName !== filterTeam) return false;
-    if (filterParallel && card.parallel !== filterParallel) return false;
-    if (filterCondition && card.condition !== filterCondition) return false;
-    return true;
-  });
-
-  // Apply sorting
-  const sortedCards = [...filteredCards].sort((a, b) => {
-    let comparison = 0;
-
-    switch (sortBy) {
-      case 'driver':
-        comparison = a.driverName.localeCompare(b.driverName);
-        break;
-      case 'team':
-        comparison = a.constructorName.localeCompare(b.constructorName);
-        break;
-      case 'year':
-        comparison = a.year - b.year;
-        break;
-      case 'quantity':
-        comparison = a.quantity - b.quantity;
-        break;
-      case 'condition':
-        comparison = a.condition.localeCompare(b.condition);
-        break;
-      default:
-        comparison = a.driverName.localeCompare(b.driverName);
-    }
-
-    return sortOrder === 'asc' ? comparison : -comparison;
-  });
-
-  // Collection stats
-  const totalCards = cardOwnerships.reduce((sum, ownership) => sum + ownership.quantity, 0);
-  const uniqueCardsCount = cardOwnerships.length;
-  const rookieCardsCount = cardOwnerships.filter(card => card.rookieCard).length;
-  const highestValueCard = cardOwnerships.sort((a, b) => {
-    const aValue = a.purchasePrice || 0;
-    const bValue = b.purchasePrice || 0;
-    return bValue - aValue;
-  })[0];
-
-  const handleEditCard = (card: typeof sortedCards[0]) => {
-    setSelectedCard(card.id);
-    setEditQuantity(card.quantity);
-    setEditCondition(card.condition);
-    setEditPurchasePrice(card.purchasePrice?.toString() || '');
-    setSelectedParallel(card.parallel ?? '')
-    setShowEditModal(true);
-  };
-
-  const handleUpdateCard = async () => {
-    if (!selectedCard) return;
-
-    if (user) {
-      setSubmitLoading(true)
-      await updateCardOwnership({
-        userId: user.id,
-        cardId: selectedCard,
-        quantity: editQuantity,
-        purchasePrice: Number(editPurchasePrice),
-        condition: editCondition,
-        parallel: selectedParallel === '' ? undefined : selectedParallel,
-      });
-    }
-
-    setShowEditModal(false);
-    setSelectedCard(null);
-    setSubmitLoading(false)
-  };
-
-  const handleDeleteCard = async (cardId: string, condition: string, parallel?: string) => {
-    if (confirm('Are you sure you want to remove this card from your collection?') && user) {
-      setSubmitLoading(true)
-      await removeCardFromCollection({
-        userId: user.id,
-        cardId: cardId,
-        quantityToSubtract: editQuantity,
-        condition: condition,
-        parallel: parallel,
-      });
-      setSubmitLoading(false)
-    }
-  };
-
-  const handleAddCard = async () => {
-    if (user) {
-      setSubmitLoading(true)
-      await addCardToCollection({
-        userId: user.id,
-        cardId: newCardId,
-        quantity: newQuantity,
-        condition: newCondition,
-        purchasePrice: newPurchasePrice === undefined ? undefined : Number(newPurchasePrice),
-        parallel: selectedParallel === '' ? undefined : selectedParallel,
-      });
-    }
-    setSubmitLoading(false)
-    setShowAddModal(false);
-    resetNewCardForm();
-  };
-
-  const resetNewCardForm = () => {
-    setSelectedSet('');
-    setSelectedParallel('');
-    setCardSearchQuery('');
-    setNewCardId('');
-    setNewQuantity(1);
-    setNewCondition('Raw');
-    setNewPurchasePrice('');
-    setShowCardDropdown(false);
-  };
-
-  const handleCardSelect = (card: typeof cards[0]) => {
-    setNewCardId(card.id);
-    setCardSearchQuery(`${card.driverName} - ${card.constructorName} #${card.cardNumber}`);
-    setPossibleParallels(possibleParallels.filter((pp) => card.parallels.some((ep) => ep.name === pp.value)))
-    setShowCardDropdown(false);
+  const flash = (msg: string) => {
+    setToast(msg);
+    setTimeout(() => setToast(null), 2500);
   };
 
   return (
-      <div className="py-6 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
+      <div className="mx-auto max-w-7xl px-4 md:px-6 py-6 md:py-10">
+        <div className="flex items-center justify-between gap-3 mb-6">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">My Collection</h1>
-            <p className="text-gray-600">Manage and view your Formula 1 trading cards</p>
-          </div>
-          <div className="mt-4 md:mt-0 flex space-x-2">
-            <button
-                onClick={() => setShowAddModal(true)}
-                className="bg-[#0600E1] text-white px-4 py-2 rounded-md hover:bg-blue-700 transition flex items-center"
-            >
-              <Plus className="h-5 w-5 mr-2" />
-              Add Card
-            </button>
-            <button
-                onClick={() => setViewMode('grid')}
-                className={`p-2 rounded-md ${
-                    viewMode === 'grid' ? 'bg-[#0600E1] text-white' : 'bg-gray-100 text-gray-600'
-                }`}
-            >
-              <Grid size={20} />
-            </button>
-            <button
-                onClick={() => setViewMode('list')}
-                className={`p-2 rounded-md ${
-                    viewMode === 'list' ? 'bg-[#0600E1] text-white' : 'bg-gray-100 text-gray-600'
-                }`}
-            >
-              <List size={20} />
-            </button>
-            <button
-                onClick={() => setShowFilters(!showFilters)}
-                className={`p-2 rounded-md ${
-                    showFilters ? 'bg-[#0600E1] text-white' : 'bg-gray-100 text-gray-600'
-                }`}
-            >
-              <Filter size={20} />
-            </button>
-          </div>
-        </div>
-
-        {/* Collection stats */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          <div className="bg-white rounded-lg shadow p-4">
-            <span className="text-gray-500 text-sm">Total Cards</span>
-            <p className="text-2xl font-bold">{totalCards}</p>
-          </div>
-          <div className="bg-white rounded-lg shadow p-4">
-            <span className="text-gray-500 text-sm">Unique Cards</span>
-            <p className="text-2xl font-bold">{uniqueCardsCount}</p>
-          </div>
-          <div className="bg-white rounded-lg shadow p-4">
-            <span className="text-gray-500 text-sm">Rookie Cards</span>
-            <p className="text-2xl font-bold">{rookieCardsCount}</p>
-          </div>
-          <div className="bg-white rounded-lg shadow p-4">
-            <span className="text-gray-500 text-sm">Highest Value</span>
-            <p className="text-2xl font-bold">
-              ${highestValueCard?.purchasePrice?.toFixed(2) || '0.00'}
+            <h1 className="font-display text-3xl font-extrabold text-carbon-950 dark:text-white">
+              Collection
+            </h1>
+            <p className="text-sm text-carbon-500 dark:text-carbon-400">
+              {entries.length > 0
+                  ? `${entries.length} ${entries.length === 1 ? 'entry' : 'entries'}`
+                  : 'Manage the cards you own.'}
             </p>
           </div>
+          <button
+              onClick={() => setShowAdd(true)}
+              className="btn-primary px-4 py-2 text-sm"
+          >
+            <Plus className="h-4 w-4" /> Add card
+          </button>
         </div>
 
-        {/* Filters */}
-        {showFilters && (
-            <div className="bg-white rounded-lg shadow p-4 mb-6">
-              <div className="flex flex-col sm:flex-row justify-between items-center mb-4">
-                <h2 className="text-lg font-medium">Filters</h2>
-                <button
-                    onClick={() => {
-                      setFilterDriver('');
-                      setFilterTeam('');
-                      setFilterParallel('');
-                      setFilterCondition('');
-                    }}
-                    className="text-sm text-[#E10600] hover:text-red-700 mt-2 sm:mt-0"
-                >
-                  Clear All
-                </button>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Driver</label>
-                  <select
-                      value={filterDriver}
-                      onChange={(e) => setFilterDriver(e.target.value)}
-                      className="w-full p-2 border border-gray-300 rounded-md"
-                  >
-                    <option value="">All Drivers</option>
-                    {uniqueDrivers.map(driver => (
-                        <option key={driver} value={driver}>{driver}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Team</label>
-                  <select
-                      value={filterTeam}
-                      onChange={(e) => setFilterTeam(e.target.value)}
-                      className="w-full p-2 border border-gray-300 rounded-md"
-                  >
-                    <option value="">All Teams</option>
-                    {uniqueTeams.map(team => (
-                        <option key={team} value={team}>{team}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Parallel</label>
-                  <select
-                      value={filterParallel}
-                      onChange={(e) => setFilterParallel(e.target.value)}
-                      className="w-full p-2 border border-gray-300 rounded-md"
-                  >
-                    <option value="">Base</option>
-                    {uniqueParallels.map(parallel => (
-                        <option key={parallel} value={parallel}>{parallel}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Condition</label>
-                  <select
-                      value={filterCondition}
-                      onChange={(e) => setFilterCondition(e.target.value)}
-                      className="w-full p-2 border border-gray-300 rounded-md"
-                  >
-                    <option value="">All Conditions</option>
-                    {uniqueConditions.map(condition => (
-                        <option key={condition} value={condition}>{condition}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Sort By</label>
-                  <div className="flex">
-                    <select
-                        value={sortBy}
-                        onChange={(e) => setSortBy(e.target.value)}
-                        className="flex-grow p-2 border border-gray-300 rounded-l-md"
-                    >
-                      <option value="driver">Driver</option>
-                      <option value="team">Team</option>
-                      <option value="year">Year</option>
-                      <option value="quantity">Quantity</option>
-                      <option value="condition">Condition</option>
-                    </select>
-                    <button
-                        onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-                        className="p-2 bg-gray-100 border border-l-0 border-gray-300 rounded-r-md"
-                    >
-                      {sortOrder === 'asc' ? <SortAsc size={20} /> : <SortDesc size={20} />}
-                    </button>
-                  </div>
-                </div>
-              </div>
+        {toast && (
+            <div className="mb-4 rounded-xl bg-emerald-50 border border-emerald-200 px-4 py-2.5 text-sm font-semibold text-emerald-800 flex items-center gap-2 animate-fade-in">
+              <Check className="h-4 w-4" /> {toast}
             </div>
         )}
 
-        {/* Collection */}
-        {isUserDataLoading && <LoadingSpinner />}
-        {!isUserDataLoading && (
-            <>
-              {sortedCards.length === 0 ? (
-                  <div className="bg-white rounded-lg shadow p-8 text-center">
-                    <FileCog className="mx-auto h-12 w-12 text-gray-400" />
-                    <h3 className="mt-2 text-lg font-medium text-gray-900">No cards found</h3>
-                    <p className="mt-1 text-sm text-gray-500">
-                      {cardOwnerships.length === 0
-                          ? "You don't have any cards in your collection yet."
-                          : "No cards match your current filters."}
-                    </p>
-                    {cardOwnerships.length === 0 && (
-                        <div className="mt-6">
-                          <button
-                              onClick={() => setShowAddModal(true)}
-                              className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-[#E10600] hover:bg-red-700"
-                          >
-                            <Plus className="h-5 w-5 mr-2" />
-                            Add Your First Card
-                          </button>
-                        </div>
-                    )}
-                  </div>
-              ) : (
-                  <>
-                    {viewMode === 'grid' ? (
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-                          {sortedCards.map((card) => (
-                              <div key={`${card.id}-${card.condition}`} className="bg-white rounded-lg shadow p-4">
-                                <div className="relative">
-                                  <div className="h-25 w-25 rounded-md overflow-hidden">
-                                    <img src={card.imageUrl + "?v=2"} alt={card.driverName}
-                                         className="h-full w-full object-cover"/>
-                                  </div>
-                                  <div className="absolute top-2 right-2 flex space-x-1">
-                                    <button
-                                        onClick={() => handleEditCard(card)}
-                                        className="p-1 bg-white rounded-full shadow hover:bg-gray-100"
-                                        title="Edit Card"
-                                    >
-                                      <Edit2 className="h-4 w-4 text-gray-600"/>
-                                    </button>
-                                    <button
-                                        onClick={() => handleDeleteCard(card.id, card.condition, card.parallel)}
-                                        className="p-1 bg-white rounded-full shadow hover:bg-gray-100"
-                                        title="Remove Card"
-                                    >
-                                      <Trash2 className="h-4 w-4 text-[#E10600]"/>
-                                    </button>
-                                  </div>
-                                </div>
-                                <div className="mt-2 pt-2 border-t border-gray-100">
-                                  <div className="flex justify-between text-sm">
-                                    <span className="text-gray-500">Quantity:</span>
-                                    <span className="font-medium">{card.quantity}</span>
-                                  </div>
-                                  <div className="flex justify-between text-sm mt-1">
-                                    <span className="text-gray-500">Condition:</span>
-                                    <span className="font-medium">{card.condition}</span>
-                                  </div>
-                                  {card.purchasePrice && card.purchasePrice > 0 ? (
-                                      <div className="flex justify-between text-sm mt-1">
-                                        <span className="text-gray-500">Purchase:</span>
-                                        <span className="font-medium">${card.purchasePrice.toFixed(2)}</span>
-                                      </div>
-                                  ) : <></>}
-                                  <div className="flex justify-start mt-2">
-                                    {card.printRun && (
-                                        <div className={`text-xs font-bold px-2 py-1 rounded-full ${AttributeStyles.get('printRun')}`}>
-                                          /{card.printRun}
-                                        </div>
-                                    )}
-                                    {card.parallel && (
-                                        <div
-                                            className={`text-xs font-bold px-2 py-1 rounded-full mr-2 ${
-                                                ParallelStyles.get(card.parallel) ?? 'bg-gray-100 text-gray-800'
-                                            }`}
-                                        >
-                                          {ParallelUtils.getParallelDisplayName(card.parallel)}
-                                        </div>
-                                    )}
-                                    {card.rookieCard && (
-                                        <div className={`text-xs font-bold px-2 py-1 rounded-full ${AttributeStyles.get('rookie')}`}>
-                                          RC
-                                        </div>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                          ))}
-                        </div>
-                    ) : (
-                        <div className="bg-white rounded-lg shadow overflow-hidden">
-                          <table className="min-w-full divide-y divide-gray-200">
-                            <thead className="bg-gray-50">
-                            <tr>
-                              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Card
-                              </th>
-                              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Driver / Team
-                              </th>
-                              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Set / Year
-                              </th>
-                              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Parallel
-                              </th>
-                              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Condition
-                              </th>
-                              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Quantity
-                              </th>
-                              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Purchase
-                              </th>
-                              <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Actions
-                              </th>
-                            </tr>
-                            </thead>
-                            <tbody className="bg-white divide-y divide-gray-200">
-                            {sortedCards.map((card) => (
-                                <tr key={`${card.id}-${card.condition}`} className="hover:bg-gray-50">
-                                  <td className="px-6 py-4 whitespace-nowrap">
-                                    <div className="h-10 w-10 rounded-md overflow-hidden">
-                                      <img src={card.imageUrl + "?v=2"} alt={card.driverName} className="h-full w-full object-cover" />
-                                    </div>
-                                  </td>
-                                  <td className="px-6 py-4 whitespace-nowrap">
-                                    <div className="text-sm font-medium text-gray-900">#{card.cardNumber} {card.driverName}</div>
-                                    <div className="text-sm text-gray-500">{card.constructorName}</div>
-                                  </td>
-                                  <td className="px-6 py-4 whitespace-nowrap">
-                                    <div className="text-sm text-gray-900">{card.setName}</div>
-                                    <div className="text-sm text-gray-500">{card.year}</div>
-                                  </td>
-                                  <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                            ParallelStyles.get(card.parallel ?? 'Base') ?? 'bg-gray-100 text-gray-800'
-                        }`}>
-                          {card.parallel ?? 'Base'}
-                        </span>
-                                    {card.printRun && (
-                                        <span className="text-xs text-gray-500 ml-1">/{card.printRun}</span>
-                                    )}
-                                  </td>
-                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    {card.condition}
-                                  </td>
-                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    {card.quantity}
-                                  </td>
-                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    {card.purchasePrice && card.purchasePrice > 0
-                                        ? `$${card.purchasePrice.toFixed(2)}`
-                                        : '-'}
-                                  </td>
-                                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                    <button
-                                        onClick={() => handleEditCard(card)}
-                                        className="text-[#0600E1] hover:text-blue-800 mr-3"
-                                    >
-                                      Edit
-                                    </button>
-                                    <button
-                                        onClick={() => handleDeleteCard(card.id, card.condition, card.parallel)}
-                                        className="text-[#E10600] hover:text-red-800"
-                                    >
-                                      Delete
-                                    </button>
-                                  </td>
-                                </tr>
-                            ))}
-                            </tbody>
-                          </table>
-                        </div>
-                    )}
-                  </>
-              )}
-            </>
-        )}
-
-        {/* Add Card Modal */}
-        {showAddModal && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-              <div className="bg-white p-6 rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
-                <h3 className="text-xl font-bold mb-4">Add Card to Collection</h3>
-                <div className="space-y-4">
-                  {/* Set Selection */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Select Set</label>
-                    <select
-                        value={selectedSet}
-                        onChange={(e) => {
-                          setSelectedSet(e.target.value);
-                          setSelectedParallel('');
-                          setCardSearchQuery('');
-                          setNewCardId('');
-                        }}
-                        className="w-full p-2 border border-gray-300 rounded-md"
-                    >
-                      <option value="">Choose a set...</option>
-                      {setsDropdown.map(set => (
-                          <option key={set.value} value={set.value}>
-                            {set.label}
-                          </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Parallel Selection */}
-                  {selectedSet && (
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Select Parallel (Optional)</label>
-                        <select
-                            value={selectedParallel}
-                            onChange={(e) => {
-                              setSelectedParallel(e.target.value);
-                              setCardSearchQuery('');
-                              setNewCardId('');
-                            }}
-                            className="w-full p-2 border border-gray-300 rounded-md"
-                        >
-                          <option value="">Base</option>
-                          {possibleParallels.map(parallel => (
-                              <option key={parallel.value} value={parallel.value}>{parallel.label}</option>
-                          ))}
-                        </select>
-                      </div>
-                  )}
-
-                  {/* Card Search with Autocomplete */}
-                  {selectedSet && (
-                      <div className="relative">
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Search for Card</label>
-                        <div className="relative">
-                          <input
-                              type="text"
-                              value={cardSearchQuery}
-                              onChange={(e) => {
-                                setCardSearchQuery(e.target.value);
-                                setShowCardDropdown(true);
-                                if (!e.target.value) {
-                                  setNewCardId('');
-                                }
-                              }}
-                              onFocus={() => setShowCardDropdown(true)}
-                              placeholder="Type driver name, team, or card number..."
-                              className="w-full p-2 border border-gray-300 rounded-md pr-8"
-                          />
-                          {cardSearchQuery && (
-                              <button
-                                  onClick={() => {
-                                    setCardSearchQuery('');
-                                    setNewCardId('');
-                                    setPossibleParallels(parallelDropdown)
-                                    setShowCardDropdown(false);
-                                  }}
-                                  className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                              >
-                                <X className="h-4 w-4" />
-                              </button>
-                          )}
-                        </div>
-
-                        {/* Autocomplete Dropdown */}
-                        {showCardDropdown && cardSearchQuery && filteredCardsForAdd.length > 0 && (
-                            <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
-                              {filteredCardsForAdd.map(card => (
-                                  <button
-                                      key={card.id}
-                                      onClick={() => handleCardSelect(card)}
-                                      className="w-full px-3 py-2 text-left hover:bg-gray-50 flex items-center space-x-3"
-                                  >
-                                    <div className="flex-1">
-                                      <div className="text-sm font-medium text-gray-900">
-                                        {card.driverName} - {card.constructorName}
-                                      </div>
-                                      <div className="text-xs text-gray-500">
-                                        #{card.cardNumber}
-                                      </div>
-                                    </div>
-                                  </button>
-                              ))}
-                            </div>
-                        )}
-                      </div>
-                  )}
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Quantity</label>
-                    <input
-                        type="number"
-                        min="1"
-                        value={newQuantity}
-                        onChange={(e) => setNewQuantity(parseInt(e.target.value))}
-                        className="w-full p-2 border border-gray-300 rounded-md"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Condition</label>
-                    <select
-                        value={newCondition}
-                        onChange={(e) => setNewCondition(e.target.value)}
-                        className="w-full p-2 border border-gray-300 rounded-md"
-                    >
-                      <option value="Raw">Raw</option>
-                      <option value="PSA 10">PSA 10</option>
-                      <option value="PSA 9">PSA 9</option>
-                      <option value="PSA 8">PSA 8</option>
-                      <option value="BGS 9.5">BGS 9.5</option>
-                      <option value="BGS 9">BGS 9</option>
-                      <option value="Other">Other</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Purchase Price</label>
-                    <input
-                        type="number"
-                        step="0.01"
-                        value={newPurchasePrice}
-                        onChange={(e) => setNewPurchasePrice(e.target.value)}
-                        className="w-full p-2 border border-gray-300 rounded-md"
-                        placeholder="Optional"
-                    />
-                  </div>
-                </div>
-                <div className="mt-6 flex justify-end space-x-3">
+        {loading ? (
+            <div className="card p-6 flex items-center gap-3 text-carbon-500 dark:text-carbon-400">
+              <Spinner className="h-5 w-5 text-racing-600" /> Loading collection…
+            </div>
+        ) : error ? (
+            <ErrorState title="Couldn't load your collection" message={error} onRetry={load} />
+        ) : entries.length === 0 ? (
+            <EmptyState
+                icon={<Layers className="h-8 w-8" />}
+                title="Your collection is empty"
+                message="Add your first card to start tracking what you own."
+                action={
                   <button
-                      onClick={() => {
-                        setShowAddModal(false);
-                        resetNewCardForm();
+                      onClick={() => setShowAdd(true)}
+                      className="btn-primary px-4 py-2"
+                  >
+                    <Plus className="h-4 w-4" /> Add your first card
+                  </button>
+                }
+            />
+        ) : (
+            <div className="grid gap-3 md:gap-4 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
+              {entries.map((entry, i) => (
+                  <CollectionCard
+                      key={entry._id ?? `${entry.cardId}-${i}`}
+                      entry={entry}
+                      onEdit={() => setEditing(entry)}
+                      onDelete={async () => {
+                        if (
+                            !confirm(
+                                'Remove this card from your collection? This cannot be undone.'
+                            )
+                        )
+                          return;
+                        try {
+                          await api.deleteOwnership({
+                            _id: entry._id,
+                            userId,
+                            cardId: entry.cardId,
+                          });
+                          setEntries((prev) =>
+                              prev.filter((e) => e._id !== entry._id)
+                          );
+                          flash('Card removed.');
+                        } catch (e) {
+                          flash(
+                              e instanceof ApiError
+                                  ? e.message
+                                  : 'Could not remove card.'
+                          );
+                        }
                       }}
-                      className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                      onClick={handleAddCard}
-                      disabled={!newCardId || isSubmitLoading}
-                      className="px-4 py-2 bg-[#0600E1] text-white rounded-md hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
-                  >
-                    Add Card
-                  </button>
-                </div>
-              </div>
+                  />
+              ))}
             </div>
         )}
 
-        {/* Edit Card Modal */}
-        {showEditModal && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-              <div className="bg-white p-6 rounded-lg max-w-md w-full">
-                <h3 className="text-xl font-bold mb-4">Edit Card Details</h3>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Quantity</label>
-                    <input
-                        type="number"
-                        min="1"
-                        value={editQuantity}
-                        onChange={(e) => setEditQuantity(parseInt(e.target.value))}
-                        className="w-full p-2 border border-gray-300 rounded-md"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Condition</label>
-                    <select
-                        value={editCondition}
-                        onChange={(e) => setEditCondition(e.target.value)}
-                        className="w-full p-2 border border-gray-300 rounded-md"
-                    >
-                      <option value="Raw">Raw</option>
-                      <option value="PSA 10">PSA 10</option>
-                      <option value="PSA 9">PSA 9</option>
-                      <option value="PSA 8">PSA 8</option>
-                      <option value="BGS 9.5">BGS 9.5</option>
-                      <option value="BGS 9">BGS 9</option>
-                      <option value="Other">Other</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Purchase Price</label>
-                    <input
-                        type="number"
-                        step="0.01"
-                        value={editPurchasePrice}
-                        onChange={(e) => setEditPurchasePrice(e.target.value)}
-                        className="w-full p-2 border border-gray-300 rounded-md"
-                        placeholder="Optional"
-                    />
-                  </div>
-                </div>
-                <div className="mt-6 flex justify-end space-x-3">
-                  <button
-                      onClick={() => setShowEditModal(false)}
-                      className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                      onClick={handleUpdateCard}
-                      className="px-4 py-2 bg-[#0600E1] text-white rounded-md hover:bg-blue-700"
-                  >
-                    Save Changes
-                  </button>
-                </div>
-              </div>
-            </div>
+        {showAdd && (
+            <OwnershipModal
+                mode="add"
+                userId={userId}
+                onClose={() => setShowAdd(false)}
+                onSaved={(e) => {
+                  setEntries((prev) => [...prev, e]);
+                  setShowAdd(false);
+                  flash('Card added.');
+                }}
+            />
+        )}
+
+        {editing && (
+            <OwnershipModal
+                mode="edit"
+                userId={userId}
+                initial={editing}
+                onClose={() => setEditing(null)}
+                onSaved={(e) => {
+                  setEntries((prev) =>
+                      prev.map((p) => (p._id === editing._id ? e : p))
+                  );
+                  setEditing(null);
+                  flash('Card updated.');
+                }}
+            />
         )}
       </div>
   );
-};
+}
 
-export default CollectionPage;
+function CollectionCard({
+                          entry,
+                          onEdit,
+                          onDelete,
+                        }: {
+  entry: OwnershipEntry;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
+  return (
+      <article className="card p-4 md:p-5 flex flex-col gap-2 animate-fade-in">
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <h3 className="font-display font-bold text-carbon-950 truncate dark:text-white">
+              {entry.driverName || 'Unknown driver'}
+            </h3>
+            <p className="text-xs text-carbon-500 mt-0.5 dark:text-carbon-400">
+              {entry.setName ?? '—'}
+              {entry.year ? ` · ${entry.year}` : ''}
+              <span className="mx-1.5 text-carbon-300">·</span>#
+              {entry.cardNumber ?? '—'}
+            </p>
+          </div>
+          {entry.rookieCard && (
+              <span className="badge bg-amber-100 text-amber-800">RC</span>
+          )}
+        </div>
+
+        <dl className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-sm mt-1">
+          <Field label="Parallel" value={entry.parallel} />
+          <Field label="Quantity" value={String(entry.quantity)} />
+          <Field label="Condition" value={entry.condition} />
+          {entry.purchasePrice != null && (
+              <Field
+                  label="Price"
+                  value={`$${entry.purchasePrice.toLocaleString()}`}
+              />
+          )}
+          {entry.purchaseDate && (
+              <Field
+                  label="Purchased"
+                  value={new Date(entry.purchaseDate).toLocaleDateString()}
+              />
+          )}
+        </dl>
+
+        <div className="mt-2 flex gap-2 pt-2 border-t border-carbon-100 dark:border-carbon-800">
+          <button onClick={onEdit} className="btn-outline flex-1 py-2 text-sm">
+            <Pencil className="h-3.5 w-3.5" /> Edit
+          </button>
+          <button
+              onClick={onDelete}
+              className="btn-ghost py-2 px-3 text-sm text-redline-600 hover:bg-redline-50"
+              aria-label="Remove"
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
+        </div>
+      </article>
+  );
+}
+
+function Field({ label, value }: { label: string; value?: string | null }) {
+  return (
+      <div className="min-w-0">
+        <dt className="text-[10px] font-semibold uppercase tracking-wide text-carbon-400">
+          {label}
+        </dt>
+        <dd className="text-carbon-800 font-medium truncate dark:text-carbon-200">
+          {value && value !== 'N/A' ? value : '—'}
+        </dd>
+      </div>
+  );
+}
+
+function OwnershipModal({
+                          mode,
+                          userId,
+                          initial,
+                          onClose,
+                          onSaved,
+                        }: {
+  mode: 'add' | 'edit';
+  userId: string;
+  initial?: OwnershipEntry;
+  onClose: () => void;
+  onSaved: (e: OwnershipEntry) => void;
+}) {
+  const { sets } = useSets();
+  const [selectedSet, setSelectedSet] = useState('');
+  const [cards, setCards] = useState<CardResponse[]>([]);
+  const [cardsLoading, setCardsLoading] = useState(false);
+  const [cardsError, setCardsError] = useState<string | null>(null);
+  const [selectedCardId, setSelectedCardId] = useState(initial?.cardId ?? '');
+  const [cardSearch, setCardSearch] = useState('');
+  const [parallel, setParallel] = useState(initial?.parallel ?? '');
+  const [quantity, setQuantity] = useState(String(initial?.quantity ?? 1));
+  const [condition, setCondition] = useState(initial?.condition ?? 'Raw');
+  const [purchasePrice, setPurchasePrice] = useState(
+      initial?.purchasePrice != null ? String(initial.purchasePrice) : ''
+  );
+  const [purchaseDate, setPurchaseDate] = useState(
+      initial?.purchaseDate ? initial.purchaseDate.slice(0, 10) : ''
+  );
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // In edit mode, preselect the set from the initial entry
+  useEffect(() => {
+    if (mode === 'edit' && initial?.setName && !selectedSet) {
+      setSelectedSet(initial.setName);
+    }
+  }, [mode, initial, selectedSet]);
+
+  // Fetch cards when set changes
+  useEffect(() => {
+    if (!selectedSet) {
+      setCards([]);
+      return;
+    }
+    let active = true;
+    setCardsLoading(true);
+    setCardsError(null);
+    (async () => {
+      try {
+        const data = await api.getCards(selectedSet);
+        if (active) setCards(data);
+      } catch (e) {
+        if (!active) return;
+        setCardsError(
+            e instanceof ApiError ? e.message : 'Unable to load cards for this set.'
+        );
+      } finally {
+        if (active) setCardsLoading(false);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [selectedSet]);
+
+  const selectedCard = useMemo(
+      () => cards.find((c) => c.id === selectedCardId) ?? null,
+      [cards, selectedCardId]
+  );
+
+  const filteredCards = useMemo(() => {
+    const q = cardSearch.trim().toLowerCase();
+    if (!q) return cards;
+    return cards.filter(
+        (c) =>
+            c.driverName.toLowerCase().includes(q) ||
+            c.cardNumber.toLowerCase().includes(q) ||
+            c.constructorName.toLowerCase().includes(q)
+    );
+  }, [cards, cardSearch]);
+
+  const submit = async () => {
+    setError(null);
+    if (!selectedCardId) {
+      setError('Please select a card.');
+      return;
+    }
+    const qty = Number(quantity);
+    if (!Number.isFinite(qty) || qty < 1) {
+      setError('Quantity must be at least 1.');
+      return;
+    }
+    setSubmitting(true);
+    const payload: OwnershipEntry = {
+      userId,
+      cardId: selectedCardId,
+      quantity: qty,
+      condition,
+      ...(parallel ? { parallel } : {}),
+      ...(purchasePrice ? { purchasePrice: Number(purchasePrice) } : {}),
+      ...(purchaseDate
+          ? { purchaseDate: new Date(purchaseDate).toISOString() }
+          : {}),
+      // enriched fields for local display
+      ...(selectedCard
+          ? {
+            driverName: selectedCard.driverName,
+            setName: selectedCard.setName,
+            year: selectedCard.year,
+            cardNumber: selectedCard.cardNumber,
+            constructorName: selectedCard.constructorName,
+            rookieCard: selectedCard.rookieCard,
+          }
+          : {}),
+    };
+    try {
+      const saved =
+          mode === 'add'
+              ? await api.addOwnership(payload)
+              : await api.updateOwnership(
+                  initial?._id ? { ...payload, _id: initial._id } : payload
+              );
+      onSaved({ ...saved, ...payload });
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'Could not save card.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+      <div
+          className="fixed inset-0 z-50 grid place-items-center bg-carbon-950/50 backdrop-blur-sm p-4 animate-fade-in"
+          onClick={onClose}
+      >
+        <div
+            className="card w-full max-w-lg p-5 md:p-6 max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-display text-xl font-bold text-carbon-950 dark:text-white">
+              {mode === 'add' ? 'Add card' : 'Edit card'}
+            </h2>
+            <button
+                onClick={onClose}
+                className="btn-ghost p-2"
+                aria-label="Close"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+
+          <div className="space-y-4">
+            {/* Step 1: Set selection */}
+            <div>
+              <label htmlFor="set-pick" className="label">
+                Card set
+              </label>
+              <select
+                  id="set-pick"
+                  value={selectedSet}
+                  onChange={(e) => {
+                    setSelectedSet(e.target.value);
+                    setSelectedCardId('');
+                    setParallel('');
+                  }}
+                  className="input appearance-none bg-white dark:bg-carbon-900"
+              >
+                <option value="">Select a set…</option>
+                {sets.map((s) => (
+                    <option key={s.value} value={s.value}>
+                      {s.label}
+                    </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Step 2: Card selection (appears once a set is chosen) */}
+            {selectedSet && (
+                <div className="space-y-3 animate-fade-in">
+                  {cardsLoading ? (
+                      <div className="flex items-center gap-2 text-sm text-carbon-500 dark:text-carbon-400">
+                        <Spinner className="h-4 w-4 text-racing-600" /> Loading cards…
+                      </div>
+                  ) : cardsError ? (
+                      <p className="rounded-lg bg-redline-50 border border-redline-200 px-3 py-2 text-sm text-redline-700">
+                        {cardsError}
+                      </p>
+                  ) : (
+                      <>
+                        <div>
+                          <label htmlFor="card-pick" className="label">
+                            Card
+                          </label>
+                          <div className="relative">
+                            <Search className="absolute left-3 top-3 h-4 w-4 text-carbon-400" />
+                            <input
+                                id="card-search"
+                                className="input pl-9 mb-2"
+                                value={cardSearch}
+                                onChange={(e) => setCardSearch(e.target.value)}
+                                placeholder="Search by driver, number, or team…"
+                            />
+                          </div>
+                          <select
+                              id="card-pick"
+                              value={selectedCardId}
+                              onChange={(e) => {
+                                setSelectedCardId(e.target.value);
+                                setParallel('');
+                              }}
+                              className="input appearance-none bg-white dark:bg-carbon-900"
+                              size={1}
+                          >
+                            <option value="">Select a card…</option>
+                            {filteredCards.map((c) => (
+                                <option key={c.id} value={c.id}>
+                                  #{c.cardNumber} — {c.driverName} ({c.constructorName})
+                                  {c.rookieCard ? ' · RC' : ''}
+                                </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        {/* Step 3: Parallel selection (appears once a card is chosen) */}
+                        {selectedCard && (
+                            <div className="animate-fade-in">
+                              <label htmlFor="par-pick" className="label">
+                                Parallel (optional)
+                              </label>
+                              <select
+                                  id="par-pick"
+                                  value={parallel}
+                                  onChange={(e) => setParallel(e.target.value)}
+                                  className="input appearance-none bg-white dark:bg-carbon-900"
+                              >
+                                <option value="">No specific parallel</option>
+                                {selectedCard.parallels.map((p) => (
+                                    <option key={p.name} value={p.name}>
+                                      {p.name}
+                                      {p.printRun ? ` (/${p.printRun})` : ''}
+                                      {p.isOneOfOne ? ' · 1/1' : ''}
+                                    </option>
+                                ))}
+                              </select>
+                            </div>
+                        )}
+                      </>
+                  )}
+                </div>
+            )}
+
+            {/* Selected card preview */}
+            {selectedCard && (
+                <div className="rounded-xl bg-carbon-50 border border-carbon-200 p-3 dark:bg-carbon-950/50 dark:border-carbon-800 animate-fade-in">
+                  <p className="font-display font-bold text-carbon-950 dark:text-white">
+                    {selectedCard.driverName}
+                  </p>
+                  <p className="text-xs text-carbon-500 dark:text-carbon-400 mt-0.5">
+                <span className="font-mono font-semibold text-carbon-700 dark:text-carbon-300">
+                  #{selectedCard.cardNumber}
+                </span>
+                    <span className="mx-1.5 text-carbon-300">·</span>
+                    {selectedCard.constructorName}
+                    {selectedCard.rookieCard && (
+                        <span className="badge bg-amber-100 text-amber-800 ml-2">
+                    RC
+                  </span>
+                    )}
+                  </p>
+                </div>
+            )}
+
+            {/* Details (always visible) */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label htmlFor="qty" className="label">
+                  Quantity
+                </label>
+                <input
+                    id="qty"
+                    type="number"
+                    min={1}
+                    className="input"
+                    value={quantity}
+                    onChange={(e) => setQuantity(e.target.value)}
+                />
+              </div>
+              <div>
+                <label htmlFor="cond" className="label">
+                  Condition
+                </label>
+                <select
+                    id="cond"
+                    className="input"
+                    value={condition}
+                    onChange={(e) => setCondition(e.target.value)}
+                >
+                  {CONDITIONS.map((c) => (
+                      <option key={c}>{c}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label htmlFor="price" className="label">
+                  Purchase price (optional)
+                </label>
+                <input
+                    id="price"
+                    type="number"
+                    min={0}
+                    className="input"
+                    value={purchasePrice}
+                    onChange={(e) => setPurchasePrice(e.target.value)}
+                    placeholder="0"
+                />
+              </div>
+              <div>
+                <label htmlFor="pdate" className="label">
+                  Purchase date (optional)
+                </label>
+                <input
+                    id="pdate"
+                    type="date"
+                    className="input"
+                    value={purchaseDate}
+                    onChange={(e) => setPurchaseDate(e.target.value)}
+                />
+              </div>
+            </div>
+
+            {error && (
+                <p className="rounded-lg bg-redline-50 border border-redline-200 px-3 py-2 text-sm text-redline-700">
+                  {error}
+                </p>
+            )}
+
+            <div className="flex gap-2 pt-1">
+              <button
+                  onClick={submit}
+                  disabled={submitting || !selectedCardId}
+                  className="btn-primary flex-1 py-2.5"
+              >
+                {submitting ? (
+                    <Spinner className="h-4 w-4" />
+                ) : (
+                    <Check className="h-4 w-4" />
+                )}
+                {mode === 'add' ? 'Add to collection' : 'Save changes'}
+              </button>
+              <button onClick={onClose} className="btn-outline py-2.5">
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+  );
+}
